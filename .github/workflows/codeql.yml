@@ -1,0 +1,63 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.js"
+      - "**.mjs"
+      - "**.ts"
+      - "**.svelte"
+      - "**.html"
+      - ".github/workflows/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**.js"
+      - "**.mjs"
+      - "**.ts"
+      - "**.svelte"
+      - "**.html"
+      - ".github/workflows/**"
+  workflow_dispatch:
+  schedule:
+    # Scheduled scans use the default branch and pick up new security queries.
+    - cron: "23 3 * * 1"
+
+permissions:
+  contents: read
+  security-events: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # Both languages support extraction without builds or services.
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"

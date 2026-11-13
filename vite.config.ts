@@ -3,6 +3,16 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, lazyPlugins } from "vite-plus";
 
+const basePath = process.env.BASE_PATH ?? "";
+
+// SvelteKit допускает только «» или «/путь» (начинается с «/» и не заканчивается
+// им); невалидные значения из окружения заменяются корнем сайта, а не роняют
+// сборку. Приведение типа безопасно: условие повторяет правило SvelteKit.
+const base: "" | `/${string}` =
+  basePath.length > 1 && basePath.startsWith("/") && !basePath.endsWith("/")
+    ? (basePath as `/${string}`)
+    : "";
+
 export default defineConfig({
   fmt: {},
   lint: {
@@ -44,6 +54,12 @@ export default defineConfig({
       adapter: adapter({
         fallback: "index.html",
       }),
+
+      paths: {
+        // GitHub Pages отдаёт сайт из подкаталога /<repo>/, поэтому base path
+        // задаётся при сборке: деплой-воркфлоу экспортирует BASE_PATH.
+        base: base,
+      },
     }),
   ]),
 });

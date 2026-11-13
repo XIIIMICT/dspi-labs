@@ -104,7 +104,7 @@ bun run test        # smoke-тест логики (стемминг, индек�
 ```bash
 npx serve build
 # или
-python3 -m http.server -d build 8000
+uv run python -m http.server -d build 8000
 ```
 
 Открывать нужно через `http://`, не двойным щелчком по `index.html` (браузер
@@ -112,6 +112,22 @@ python3 -m http.server -d build 8000
 `/search/1/слово` и т.п.) обслуживаются единственной страницей `index.html`
 (SPA-fallback) — заходить с корня или использовать сервер с fallback-логикой
 (`vp preview`, `npx serve` умеют это из коробки).
+
+## GitHub Pages
+
+Воркфлоу `.github/workflows/build_and_deploy.yml` собирает сайт и выкладывает
+его на GitHub Pages при каждом push в `main` (или запуске вручную через
+Run workflow):
+
+- base path подставляется автоматически: сборка выполняется с
+  `BASE_PATH=/<имя репозитория>`, потому что Pages отдаёт сайт из подкаталога
+  (`https://<user>.github.io/<repo>/`). Локально то же самое:
+  `$env:BASE_PATH="/dspi-labs"; bun run build` (PowerShell);
+- для глубоких ссылок (`/<repo>/document/1` и т.п.) из `index.html` копируется
+  `404.html` — SPA-заглушка, которую Pages отдаёт на любом неизвестном маршруте;
+  клиентский роутер SvelteKit доводит её до нужного экрана;
+- `actions/configure-pages` с `enablement: true` сам включает Pages в настройках
+  репозитория (если ещё не включены) и настраивает источник «GitHub Actions».
 
 ## Структура проекта
 

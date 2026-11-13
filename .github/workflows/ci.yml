@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  quality:
+    name: Quality and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run lint:check
+      - run: bun run format:check
+      - run: bun run test
+
+  workflows:
+    name: Workflow validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate GitHub Actions
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The FULL history: a secret that was committed and then deleted is
+          # still in every clone, so a shallow scan would miss exactly the leak
+          # that matters most.
+          fetch-depth: 0
+      - name: Scan the history for secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Findings are reported, not silently ignored: a false positive is
+          # fixed in .gitleaks.toml with a reason, never by lowering the gate.
+          GITLEAKS_ENABLE_SUMMARY: true
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v4
+        with:
+          # Block a PR that introduces a known-vulnerable package.
+          fail-on-severity: moderate
+          comment-summary-in-pr: on-failure
