@@ -8,8 +8,8 @@
 	import { Label } from '#lib/components/ui/label';
 	import { ScrollArea } from '#lib/components/ui/scroll-area';
 	import { Separator } from '#lib/components/ui/separator';
-	import PageHeader from '#lib/components/page-header.svelte';
-	import { appStore as app } from '#lib/lab/store.svelte';
+	import MainHeader from '#lib/components/main-header.svelte';
+	import { appStore as app } from '#lib/labs/lab-1/store.svelte';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import InfoIcon from '@lucide/svelte/icons/info';
@@ -56,12 +56,9 @@
 	}
 </script>
 
-<div class="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-6">
-	<PageHeader
-		title="Инвертированный индекс и словарь"
-		subtitle="Лабораторная работа №1 · Распределённые системы обработки информации · вариант 8"
-	/>
+<MainHeader />
 
+<div class="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-6">
 	<Card>
 		<CardHeader>
 			<CardTitle>Документы</CardTitle>

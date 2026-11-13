@@ -2,8 +2,8 @@
 	import { Badge } from '#lib/components/ui/badge';
 	import { Button } from '#lib/components/ui/button';
 	import { ScrollArea } from '#lib/components/ui/scroll-area';
-	import type { Document } from '#lib/lab/models';
-	import { findWords, stem } from '#lib/lab/text-processing';
+	import type { Document } from '#lib/labs/lab-1/models';
+	import { findWords, stem } from '#lib/labs/lab-1/text-processing';
 	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 

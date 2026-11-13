@@ -6,10 +6,14 @@
  */
 
 import assert from "node:assert/strict";
-import { stem, tokenizeAndNormalize, removeStopWords } from "../src/lib/lab/text-processing.ts";
-import { InvertedIndexBuilder } from "../src/lib/lab/inverted-index-builder.ts";
-import { generateDemoCollection } from "../src/lib/lab/demo-texts.ts";
-import type { Document } from "../src/lib/lab/models.ts";
+import {
+  stem,
+  tokenizeAndNormalize,
+  removeStopWords,
+} from "../src/lib/labs/lab-1/text-processing.ts";
+import { InvertedIndexBuilder } from "../src/lib/labs/lab-1/inverted-index-builder.ts";
+import { generateDemoCollection } from "../src/lib/labs/lab-1/demo-texts.ts";
+import type { Document } from "../src/lib/labs/lab-1/models.ts";
 
 // --- Стемминг (порт stem(): перебор суффиксов, обрезка при остатке > 2) ---
 assert.equal(stem("кошки"), "кошк"); // «ы» срезается

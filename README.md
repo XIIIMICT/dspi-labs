@@ -4,6 +4,8 @@
 по курсу «Распределённые системы обработки информации» (вариант 8).
 Исходное приложение было написано на Kotlin + Jetpack Compose под Android;
 эта версия — статическая веб-страница на **Vite+**, **Svelte** и **shadcn-svelte**.
+Каркас рассчитан на несколько лабораторных: у каждой — своя папка в `src/lib/labs/`
+с заданием (Markdown), словарями вариантов (JSON) и кодом работы.
 
 Вся обработка (чтение файлов, токенизация, стемминг, построение индекса, поиск)
 выполняется полностью в браузере — бэкенд не нужен.
@@ -48,19 +50,22 @@
 
 ## Соответствие файлов оригинала и веб-версии
 
-| Kotlin (Android)                                 | Веб-версия                                 | Что перенесено                                                                                  |
-| ------------------------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `data/DocumentModels.kt`                         | `src/lib/lab/models.ts`                    | `Document`, `Posting`, `TermInfo`                                                               |
-| `data/TextProcessing.kt`                         | `src/lib/lab/text-processing.ts`           | `tokenizeAndNormalize`, `removeStopWords`, `stem`, список стоп-слов и суффиксов — без изменений |
-| `data/InvertedIndexBuilder.kt`                   | `src/lib/lab/inverted-index-builder.ts`    | построение индекса с теми же сообщениями журнала                                                |
-| `data/DocumentLoader.kt`                         | `src/lib/lab/document-loader.ts`           | загрузка и валидация файлов (`Uri` → `File API`)                                                |
-| `ui/MainViewModel.kt` + состояния `MainActivity` | `src/lib/lab/store.svelte.ts`              | глобальное состояние на рунах Svelte 5                                                          |
-| `ui/MainScreen.kt`                               | `src/routes/+page.svelte`                  | выбор файлов, поиск, список документов, логи                                                    |
-| `ui/DocumentScreen.kt`                           | `src/routes/document/[docId]/+page.svelte` | просмотр текста документа                                                                       |
-| `ui/InvertedIndexScreen.kt`                      | `src/routes/invertedIndex/+page.svelte`    | словарь и постинги                                                                              |
-| `ui/SearchScreen.kt`                             | `src/routes/search/[docId]/[query]/`       | подсветка вхождений, «Пред./След.», автоскролл                                                  |
-| `ui/Navigation.kt` (`NavHost`)                   | файловая маршрутизация SvelteKit           | те же маршруты: `/`, `/document/{id}`, `/invertedIndex`, `/search/{id}/{query}`                 |
-| —                                                | `src/lib/lab/demo-texts.ts`                | генератор демо-коллекции (новое)                                                                |
+| Kotlin (Android)                                 | Веб-версия                                     | Что перенесено                                                                                  |
+| ------------------------------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `data/DocumentModels.kt`                         | `src/lib/labs/lab-1/models.ts`                 | `Document`, `Posting`, `TermInfo`                                                               |
+| `data/TextProcessing.kt`                         | `src/lib/labs/lab-1/text-processing.ts`        | `tokenizeAndNormalize`, `removeStopWords`, `stem`, список стоп-слов и суффиксов — без изменений |
+| `data/InvertedIndexBuilder.kt`                   | `src/lib/labs/lab-1/inverted-index-builder.ts` | построение индекса с теми же сообщениями журнала                                                |
+| `data/DocumentLoader.kt`                         | `src/lib/labs/lab-1/document-loader.ts`        | загрузка и валидация файлов (`Uri` → `File API`)                                                |
+| `ui/MainViewModel.kt` + состояния `MainActivity` | `src/lib/labs/lab-1/store.svelte.ts`           | глобальное состояние на рунах Svelte 5                                                          |
+| `ui/MainScreen.kt`                               | `src/routes/+page.svelte`                      | выбор файлов, поиск, список документов, логи                                                    |
+| `ui/DocumentScreen.kt`                           | `src/routes/document/[docId]/+page.svelte`     | просмотр текста документа                                                                       |
+| `ui/InvertedIndexScreen.kt`                      | `src/routes/invertedIndex/+page.svelte`        | словарь и постинги                                                                              |
+| `ui/SearchScreen.kt`                             | `src/routes/search/[docId]/[query]/`           | подсветка вхождений, «Пред./След.», автоскролл                                                  |
+| `ui/Navigation.kt` (`NavHost`)                   | файловая маршрутизация SvelteKit               | те же маршруты: `/`, `/document/{id}`, `/invertedIndex`, `/search/{id}/{query}`                 |
+| —                                                | `src/lib/labs/lab-1/demo-texts.ts`             | генератор демо-коллекции (новое)                                                                |
+| —                                                | `src/lib/labs/lab-1/assignment.md`             | текст задания лабораторной (Markdown, показывается в drawer «Задание»)                          |
+| —                                                | `src/lib/labs/lab-1/variants.json`             | словари вариантов: номера, вид и язык                                                           |
+| —                                                | `src/lib/labs/index.ts`                        | реестр лабораторных для шапки                                                                   |
 
 ## Запуск
 
@@ -70,7 +75,7 @@ bun run dev         # дев-сервер с HMR → http://localhost:5173
 bun run build       # статическая сборка в каталог build/
 bun run preview     # локальный просмотр собранного сайта
 bun run check       # svelte-check: проверка типов
-bun run test        # smoke-тест логики (стемминг, индекс, демо-коллекция)
+bun run test        # smoke-тест логики + валидность variants.json лабораторных
 ```
 
 > **Замечание о глобальном `vp`.** Если Vite+ установлен глобально
@@ -135,21 +140,29 @@ Run workflow):
 
 ```
 src/
-├── app.css                    # тема shadcn-svelte (пресет nova) + Tailwind
+├── app.css                       # тема shadcn-svelte (пресет nova) + Tailwind
 ├── app.html
 ├── lib/
 │   ├── components/
-│   │   ├── ui/                # сгенерированные компоненты shadcn-svelte
-│   │   ├── page-header.svelte # шапка экрана (кнопка «Назад», тема)
+│   │   ├── ui/                          # сгенерированные компоненты shadcn-svelte
+│   │   ├── main-header.svelte           # шапка: вкладки ЛР, «Задание» (drawer), вариант
+│   │   ├── lab-assignment-drawer.svelte # drawer с заданием из assignment.md лабы
+│   │   ├── page-header.svelte           # шапка экрана (кнопка «Назад», тема)
 │   │   └── theme-toggle.svelte
-│   └── lab/
-│       ├── models.ts          # Document / Posting / TermInfo
-│       ├── text-processing.ts # токенизация, стоп-слова, стемминг
-│       ├── inverted-index-builder.ts
-│       ├── document-loader.ts
-│       ├── demo-texts.ts      # генератор 100 демо-документов
-│       ├── store.svelte.ts    # глобальное состояние (руны)
-│       └── navigation.ts      # goBack() — аналог popBackStack()
-└── routes/                    # экраны (см. таблицу выше)
-tests/smoke-test.mts           # проверки портированной логики
+│   └── labs/
+│       ├── index.ts                     # реестр лабораторных (номер → задание и варианты)
+│       └── lab-1/
+│           ├── assignment.md            # текст задания (Markdown)
+│           ├── variants.json            # словари вариантов: variants / вид / язык
+│           ├── models.ts                # Document / Posting / TermInfo
+│           ├── text-processing.ts       # токенизация, стоп-слова, стемминг
+│           ├── inverted-index-builder.ts
+│           ├── document-loader.ts
+│           ├── demo-texts.ts            # генератор 100 демо-документов
+│           ├── store.svelte.ts          # глобальное состояние (руны)
+│           └── navigation.ts            # goBack() — аналог popBackStack()
+└── routes/                       # экраны (см. таблицу выше)
+tests/
+├── smoke-test.mts                # проверки портированной логики
+└── variants-json.test.mts        # валидность variants.json всех лабораторных
 ```

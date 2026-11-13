@@ -7,8 +7,8 @@
 	import { Card, CardContent } from '#lib/components/ui/card';
 	import { ScrollArea } from '#lib/components/ui/scroll-area';
 	import PageHeader from '#lib/components/page-header.svelte';
-	import { appStore as app } from '#lib/lab/store.svelte';
-	import { findWords } from '#lib/lab/text-processing';
+	import { appStore as app } from '#lib/labs/lab-1/store.svelte';
+	import { findWords } from '#lib/labs/lab-1/text-processing';
 	import FileXIcon from '@lucide/svelte/icons/file-x';
 
 	const doc = $derived(app.documents.find((d) => d.id === Number(page.params.docId)));

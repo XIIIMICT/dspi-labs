@@ -2,7 +2,7 @@
 	import { Button } from '#lib/components/ui/button';
 	import ThemeToggle from './theme-toggle.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import { goBack } from '#lib/lab/navigation';
+	import { goBack } from '#lib/labs/lab-1/navigation';
 
 	let {
 		title,

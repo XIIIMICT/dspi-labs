@@ -5,7 +5,7 @@
 	import { Button } from '#lib/components/ui/button';
 	import PageHeader from '#lib/components/page-header.svelte';
 	import SearchView from './search-view.svelte';
-	import { appStore as app } from '#lib/lab/store.svelte';
+	import { appStore as app } from '#lib/labs/lab-1/store.svelte';
 	import FileSearchIcon from '@lucide/svelte/icons/file-search';
 
 	const docId = $derived(Number(page.params.docId));
