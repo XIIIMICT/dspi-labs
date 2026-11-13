@@ -9,7 +9,9 @@
 	import { ScrollArea } from '#lib/components/ui/scroll-area';
 	import { Separator } from '#lib/components/ui/separator';
 	import MainHeader from '#lib/components/main-header.svelte';
+	import DocumentViewerDrawer from '#lib/components/document-viewer-drawer.svelte';
 	import { appStore as app } from '#lib/labs/lab-1/store.svelte';
+	import type { Document } from '#lib/labs/lab-1/models';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import InfoIcon from '@lucide/svelte/icons/info';
@@ -36,6 +38,10 @@
 
 	let fileInput: HTMLInputElement | null = $state(null);
 	let dragOver = $state(false);
+
+	/** Документ, показываемый в drawer просмотра. */
+	let viewDoc: Document | null = $state(null);
+	let viewOpen = $state(false);
 
 	function onFilePick(event: Event): void {
 		const input = event.currentTarget as HTMLInputElement;
@@ -188,7 +194,10 @@
 								<button
 									type="button"
 									class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
-									onclick={() => goto(`/document/${doc.id}`)}
+									onclick={() => {
+									viewDoc = doc;
+									viewOpen = true;
+								}}
 								>
 									<FileTextIcon class="text-muted-foreground size-4 shrink-0" />
 									<span class="min-w-0">
@@ -257,4 +266,6 @@
 			{/if}
 		</CardContent>
 	</Card>
+
+	<DocumentViewerDrawer bind:open={viewOpen} doc={viewDoc} />
 </div>
