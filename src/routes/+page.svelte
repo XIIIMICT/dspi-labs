@@ -9,9 +9,10 @@
 	import { ScrollArea } from '#lib/components/ui/scroll-area';
 	import { Separator } from '#lib/components/ui/separator';
 	import MainHeader from '#lib/components/main-header.svelte';
-	import DocumentViewerDrawer from '#lib/components/document-viewer-drawer.svelte';
+	import ModalOrDrawer from '#lib/components/modal-or-drawer.svelte';
 	import { appStore as app } from '#lib/labs/lab-1/store.svelte';
 	import type { Document } from '#lib/labs/lab-1/models';
+	import { findWords } from '#lib/labs/lab-1/text-processing';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import InfoIcon from '@lucide/svelte/icons/info';
@@ -39,9 +40,12 @@
 	let fileInput: HTMLInputElement | null = $state(null);
 	let dragOver = $state(false);
 
-	/** Документ, показываемый в drawer просмотра. */
-	let viewDoc: Document | null = $state(null);
+	/** Документ, показываемый в modal/drawer просмотра. */
+	let viewDoc = $state<Document | null>(null);
 	let viewOpen = $state(false);
+	// const-зеркало viewDoc: так сужение типов в $derived и шаблоне работает стабильно
+	const shownDoc = $derived(viewDoc);
+	const docWordCount = $derived(shownDoc ? findWords(shownDoc.rawText).length : 0);
 
 	function onFilePick(event: Event): void {
 		const input = event.currentTarget as HTMLInputElement;
@@ -267,5 +271,20 @@
 		</CardContent>
 	</Card>
 
-	<DocumentViewerDrawer bind:open={viewOpen} doc={viewDoc} />
+	<ModalOrDrawer
+		bind:open={viewOpen}
+		title={shownDoc ? `Документ: ${shownDoc.name}` : 'Документ'}
+		description="Текст документа полностью"
+	>
+		{#snippet badges()}
+			{#if shownDoc}
+				<Badge variant="secondary">ID: {shownDoc.id}</Badge>
+				<Badge variant="secondary">Слов: {docWordCount}</Badge>
+				<Badge variant="secondary" class="max-w-full truncate">Путь: {shownDoc.path}</Badge>
+			{/if}
+		{/snippet}
+		{#if shownDoc}
+			<p class="leading-relaxed whitespace-pre-wrap">{shownDoc.rawText}</p>
+		{/if}
+	</ModalOrDrawer>
 </div>

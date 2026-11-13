@@ -63,7 +63,7 @@
 | `ui/SearchScreen.kt`                             | `src/routes/search/[docId]/[query]/`           | подсветка вхождений, «Пред./След.», автоскролл                                                  |
 | `ui/Navigation.kt` (`NavHost`)                   | файловая маршрутизация SvelteKit               | те же маршруты: `/`, `/document/{id}`, `/invertedIndex`, `/search/{id}/{query}`                 |
 | —                                                | `src/lib/labs/lab-1/demo-texts.ts`             | генератор демо-коллекции (новое)                                                                |
-| —                                                | `src/lib/labs/lab-1/assignment.md`             | текст задания лабораторной (Markdown, показывается в drawer «Задание»)                          |
+| —                                                | `src/lib/labs/lab-1/assignment.md`             | текст задания лабораторной (Markdown, показывается в «Задании»)                                 |
 | —                                                | `src/lib/labs/lab-1/variants.json`             | словари вариантов: номера, вид и язык                                                           |
 | —                                                | `src/lib/labs/index.ts`                        | реестр лабораторных для шапки                                                                   |
 
@@ -145,8 +145,8 @@ src/
 ├── lib/
 │   ├── components/
 │   │   ├── ui/                          # сгенерированные компоненты shadcn-svelte
-│   │   ├── main-header.svelte           # шапка: вкладки ЛР, «Задание» (drawer), вариант
-│   │   ├── lab-assignment-drawer.svelte # drawer с заданием из assignment.md лабы
+│   │   ├── main-header.svelte           # шапка: вкладки ЛР, «Задание», вариант
+│   │   ├── modal-or-drawer.svelte       # окна «Задание» и просмотра документа: modal, на мобильных — drawer
 │   │   ├── page-header.svelte           # шапка экрана (кнопка «Назад», тема)
 │   │   └── theme-toggle.svelte
 │   └── labs/

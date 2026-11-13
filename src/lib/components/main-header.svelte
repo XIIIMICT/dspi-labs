@@ -1,17 +1,23 @@
 <script lang="ts">
-	import LabAssignmentDrawer from '#lib/components/lab-assignment-drawer.svelte';
+	import ModalOrDrawer from '#lib/components/modal-or-drawer.svelte';
+	import { Badge } from '#lib/components/ui/badge';
+	import { Button } from '#lib/components/ui/button';
 	import * as Select from '#lib/components/ui/select';
 	import { Tabs, TabsList, TabsTrigger } from '#lib/components/ui/tabs';
 	import ThemeToggle from './theme-toggle.svelte';
-	import { getVariantNumbers, labs } from '#lib/labs';
+	import { getVariantInfo, getVariantNumbers, labs } from '#lib/labs';
+	import { marked } from 'marked';
 
 	const LAB_NUMBERS = [1, 2, 3, 4];
 
 	let activeLab = $state('1');
 	let variant = $state('8');
+	let assignmentOpen = $state(false);
 
 	const lab = $derived(labs.find((l) => String(l.number) === activeLab) ?? labs[0]);
 	const variantNumbers = $derived(getVariantNumbers(lab));
+	const variantInfo = $derived(getVariantInfo(lab, Number(variant)));
+	const assignmentHtml = $derived(marked.parse(lab.assignment) as string);
 </script>
 
 <header class="sticky top-0 z-10 border-b border-foreground/10 bg-background">
@@ -38,7 +44,7 @@
 					{/each}
 				</TabsList>
 			</Tabs>
-			<LabAssignmentDrawer lab={lab} variant={Number(variant)} />
+			<Button size="sm" onclick={() => (assignmentOpen = true)}>Задание</Button>
 			<Select.Root type="single" bind:value={variant}>
 				<Select.Trigger class="w-32">Вариант {variant}</Select.Trigger>
 				<Select.Content>
@@ -51,4 +57,20 @@
 			</Select.Root>
 		</div>
 	</div>
+
+	<ModalOrDrawer
+		bind:open={assignmentOpen}
+		title="Задание — Лабораторная работа {lab.number}"
+		description={lab.title}
+	>
+		{#snippet badges()}
+			<Badge variant="secondary">Вариант: {variant}</Badge>
+			<Badge variant="secondary">Вид: {variantInfo?.вид ?? '—'}</Badge>
+			<Badge variant="secondary">Язык: {variantInfo?.язык ?? '—'}</Badge>
+		{/snippet}
+		<!-- markdown-контент задания из assignment.md лабораторной -->
+		<div class="prose prose-sm dark:prose-invert max-w-none">
+			{@html assignmentHtml}
+		</div>
+	</ModalOrDrawer>
 </header>

@@ -1,0 +1,61 @@
+<script lang="ts">
+	import * as Dialog from '#lib/components/ui/dialog';
+	import * as Drawer from '#lib/components/ui/drawer';
+	import type { Snippet } from 'svelte';
+	import { MediaQuery } from 'svelte/reactivity';
+
+	let {
+		open = $bindable(false),
+		title,
+		description,
+		badges,
+		children,
+	}: {
+		open?: boolean;
+		title: string;
+		description?: string;
+		badges?: Snippet;
+		children: Snippet;
+	} = $props();
+
+	/** Ниже sm (640px) показываем drawer снизу, на остальных экранах — modal по центру. */
+	const isMobile = new MediaQuery('(max-width: 639.98px)');
+</script>
+
+{#if isMobile.current}
+	<Drawer.Root bind:open>
+		<Drawer.Content>
+			<div class="mx-auto flex max-h-[75vh] w-full max-w-4xl flex-col">
+				<Drawer.Header class="shrink-0">
+					<Drawer.Title class="truncate">{title}</Drawer.Title>
+					{#if description}
+						<Drawer.Description>{description}</Drawer.Description>
+					{/if}
+					{#if badges}
+						<div class="mt-2 flex flex-wrap justify-center gap-1.5">{@render badges()}</div>
+					{/if}
+				</Drawer.Header>
+				<div class="min-h-0 overflow-y-auto px-4 pb-6 sm:px-6">
+					{@render children()}
+				</div>
+			</div>
+		</Drawer.Content>
+	</Drawer.Root>
+{:else}
+	<Dialog.Root bind:open>
+		<Dialog.Content class="flex max-h-[85vh] flex-col sm:max-w-3xl">
+			<Dialog.Header class="shrink-0">
+				<Dialog.Title class="truncate pr-8">{title}</Dialog.Title>
+				{#if description}
+					<Dialog.Description>{description}</Dialog.Description>
+				{/if}
+				{#if badges}
+					<div class="mt-2 flex flex-wrap gap-1.5">{@render badges()}</div>
+				{/if}
+			</Dialog.Header>
+			<div class="min-h-0 flex-1 overflow-y-auto">
+				{@render children()}
+			</div>
+		</Dialog.Content>
+	</Dialog.Root>
+{/if}
