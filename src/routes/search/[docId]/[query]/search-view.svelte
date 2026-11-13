@@ -9,34 +9,45 @@
 
 	let { doc, query }: { doc: Document; query: string } = $props();
 
-	// Стем запроса (как remember { TextProcessing.stem(...) } в SearchScreen.kt)
-	const normalizedQuery = stem(query.trim().toLowerCase());
+	// Как remember { ... } в SearchScreen.kt: значения вычисляются от входных
+	// данных и пересчитываются, если они меняются. Родитель remount'ит
+	// компонент под {#key}, так что за жизнь экземпляра это происходит один
+	// раз — при входе на экран.
+	const normalizedQuery = $derived(stem(query.trim().toLowerCase()));
 
 	// Все слова документа с координатами и стемами
-	const words = findWords(doc.rawText);
-	const matchCount = words.filter((w) => w.stem === normalizedQuery).length;
-	const formsInDoc = [...new Set(words.filter((w) => w.stem === normalizedQuery).map((w) => w.word))];
+	const words = $derived(findWords(doc.rawText));
+	const matchCount = $derived(words.filter((w) => w.stem === normalizedQuery).length);
+	const formsInDoc = $derived(
+		[...new Set(words.filter((w) => w.stem === normalizedQuery).map((w) => w.word))],
+	);
 
 	// Разбиение текста на сегменты: обычный текст либо совпавшее слово
 	// с его порядковым номером среди вхождений
 	type Segment = { text: string; matchOrdinal: number | null };
-	const segments: Segment[] = [];
-	let cursor = 0;
-	let ordinal = 0;
-	for (const word of words) {
-		if (word.start > cursor) {
-			segments.push({ text: doc.rawText.slice(cursor, word.start), matchOrdinal: null });
+
+	function buildSegments(): Segment[] {
+		const segments: Segment[] = [];
+		let cursor = 0;
+		let ordinal = 0;
+		for (const word of words) {
+			if (word.start > cursor) {
+				segments.push({ text: doc.rawText.slice(cursor, word.start), matchOrdinal: null });
+			}
+			if (word.stem === normalizedQuery) {
+				segments.push({ text: word.word, matchOrdinal: ordinal++ });
+			} else {
+				segments.push({ text: word.word, matchOrdinal: null });
+			}
+			cursor = word.end;
 		}
-		if (word.stem === normalizedQuery) {
-			segments.push({ text: word.word, matchOrdinal: ordinal++ });
-		} else {
-			segments.push({ text: word.word, matchOrdinal: null });
+		if (cursor < doc.rawText.length) {
+			segments.push({ text: doc.rawText.slice(cursor), matchOrdinal: null });
 		}
-		cursor = word.end;
+		return segments;
 	}
-	if (cursor < doc.rawText.length) {
-		segments.push({ text: doc.rawText.slice(cursor), matchOrdinal: null });
-	}
+
+	const segments = $derived(buildSegments());
 
 	let current = $state(0);
 
