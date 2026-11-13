@@ -126,8 +126,10 @@ Run workflow):
 - для глубоких ссылок (`/<repo>/document/1` и т.п.) из `index.html` копируется
   `404.html` — SPA-заглушка, которую Pages отдаёт на любом неизвестном маршруте;
   клиентский роутер SvelteKit доводит её до нужного экрана;
-- `actions/configure-pages` с `enablement: true` сам включает Pages в настройках
-  репозитория (если ещё не включены) и настраивает источник «GitHub Actions».
+- один раз вручную: Settings → Pages → Build and deployment → Source —
+  **GitHub Actions**. Включать Pages автоматически из воркфлоу (`configure-pages`
+  с `enablement: true`) умеет только токен с правами администратора репозитория
+  (PAT или GitHub App); дефолтному `GITHUB_TOKEN` API это запрещает.
 
 ## Структура проекта
 

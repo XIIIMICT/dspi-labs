@@ -55,13 +55,21 @@ jobs:
           # that matters most.
           fetch-depth: 0
       - name: Scan the history for secrets
-        uses: gitleaks/gitleaks-action@v3
+        # Straight gitleaks run instead of gitleaks-action: the action scans
+        # `<first pushed commit>^..HEAD`, which hard-fails when a push batch
+        # contains the repository's root commit (`root^` does not exist). A
+        # full-history scan avoids that and is the stricter gate — every run
+        # rescans everything. .gitleaks.toml / .gitleaksignore are picked up
+        # automatically; the binary is pinned and checksum-verified.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Findings are reported, not silently ignored: a false positive is
-          # fixed in .gitleaks.toml with a reason, never by lowering the gate.
-          GITLEAKS_ENABLE_SUMMARY: true
-          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --ignore-missing --check "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" gitleaks
+          ./gitleaks detect --redact -v --exit-code=2 --no-banner
 
   dependency-review:
     name: Dependency review
