@@ -10,15 +10,15 @@
 
 ## Стек
 
-| Инструмент | Назначение |
-| --- | --- |
-| [Vite+ 1.5](https://viteplus.dev) (`vp`) | единый тулчейн: создание проекта, dev-сервер, сборка, форматирование, линт |
-| SvelteKit 3 + `adapter-static` | маршрутизация и полностью статическая сборка (SPA с fallback-страницей) |
-| Svelte 5 (runes) | реактивность (`$state`, `$derived`, `$effect`) |
-| TypeScript | типы (порт моделей данных из Kotlin) |
-| Tailwind CSS 4 | стилизация |
-| shadcn-svelte (пресет **nova**) | UI-компоненты: кнопки, карточки, таблицы, сворачиваемые панели и т.д. |
-| `@lucide/svelte`, `mode-watcher`, `svelte-sonner` | иконки, светлая/тёмная тема, всплывающие уведомления |
+| Инструмент                                        | Назначение                                                                 |
+| ------------------------------------------------- | -------------------------------------------------------------------------- |
+| [Vite+ 1.5](https://viteplus.dev) (`vp`)          | единый тулчейн: создание проекта, dev-сервер, сборка, форматирование, линт |
+| SvelteKit 3 + `adapter-static`                    | маршрутизация и полностью статическая сборка (SPA с fallback-страницей)    |
+| Svelte 5 (runes)                                  | реактивность (`$state`, `$derived`, `$effect`)                             |
+| TypeScript                                        | типы (порт моделей данных из Kotlin)                                       |
+| Tailwind CSS 4                                    | стилизация                                                                 |
+| shadcn-svelte (пресет **nova**)                   | UI-компоненты: кнопки, карточки, таблицы, сворачиваемые панели и т.д.      |
+| `@lucide/svelte`, `mode-watcher`, `svelte-sonner` | иконки, светлая/тёмная тема, всплывающие уведомления                       |
 
 ## Что делает приложение
 
@@ -48,19 +48,19 @@
 
 ## Соответствие файлов оригинала и веб-версии
 
-| Kotlin (Android) | Веб-версия | Что перенесено |
-| --- | --- | --- |
-| `data/DocumentModels.kt` | `src/lib/lab/models.ts` | `Document`, `Posting`, `TermInfo` |
-| `data/TextProcessing.kt` | `src/lib/lab/text-processing.ts` | `tokenizeAndNormalize`, `removeStopWords`, `stem`, список стоп-слов и суффиксов — без изменений |
-| `data/InvertedIndexBuilder.kt` | `src/lib/lab/inverted-index-builder.ts` | построение индекса с теми же сообщениями журнала |
-| `data/DocumentLoader.kt` | `src/lib/lab/document-loader.ts` | загрузка и валидация файлов (`Uri` → `File API`) |
-| `ui/MainViewModel.kt` + состояния `MainActivity` | `src/lib/lab/store.svelte.ts` | глобальное состояние на рунах Svelte 5 |
-| `ui/MainScreen.kt` | `src/routes/+page.svelte` | выбор файлов, поиск, список документов, логи |
-| `ui/DocumentScreen.kt` | `src/routes/document/[docId]/+page.svelte` | просмотр текста документа |
-| `ui/InvertedIndexScreen.kt` | `src/routes/invertedIndex/+page.svelte` | словарь и постинги |
-| `ui/SearchScreen.kt` | `src/routes/search/[docId]/[query]/` | подсветка вхождений, «Пред./След.», автоскролл |
-| `ui/Navigation.kt` (`NavHost`) | файловая маршрутизация SvelteKit | те же маршруты: `/`, `/document/{id}`, `/invertedIndex`, `/search/{id}/{query}` |
-| — | `src/lib/lab/demo-texts.ts` | генератор демо-коллекции (новое) |
+| Kotlin (Android)                                 | Веб-версия                                 | Что перенесено                                                                                  |
+| ------------------------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `data/DocumentModels.kt`                         | `src/lib/lab/models.ts`                    | `Document`, `Posting`, `TermInfo`                                                               |
+| `data/TextProcessing.kt`                         | `src/lib/lab/text-processing.ts`           | `tokenizeAndNormalize`, `removeStopWords`, `stem`, список стоп-слов и суффиксов — без изменений |
+| `data/InvertedIndexBuilder.kt`                   | `src/lib/lab/inverted-index-builder.ts`    | построение индекса с теми же сообщениями журнала                                                |
+| `data/DocumentLoader.kt`                         | `src/lib/lab/document-loader.ts`           | загрузка и валидация файлов (`Uri` → `File API`)                                                |
+| `ui/MainViewModel.kt` + состояния `MainActivity` | `src/lib/lab/store.svelte.ts`              | глобальное состояние на рунах Svelte 5                                                          |
+| `ui/MainScreen.kt`                               | `src/routes/+page.svelte`                  | выбор файлов, поиск, список документов, логи                                                    |
+| `ui/DocumentScreen.kt`                           | `src/routes/document/[docId]/+page.svelte` | просмотр текста документа                                                                       |
+| `ui/InvertedIndexScreen.kt`                      | `src/routes/invertedIndex/+page.svelte`    | словарь и постинги                                                                              |
+| `ui/SearchScreen.kt`                             | `src/routes/search/[docId]/[query]/`       | подсветка вхождений, «Пред./След.», автоскролл                                                  |
+| `ui/Navigation.kt` (`NavHost`)                   | файловая маршрутизация SvelteKit           | те же маршруты: `/`, `/document/{id}`, `/invertedIndex`, `/search/{id}/{query}`                 |
+| —                                                | `src/lib/lab/demo-texts.ts`                | генератор демо-коллекции (новое)                                                                |
 
 ## Запуск
 

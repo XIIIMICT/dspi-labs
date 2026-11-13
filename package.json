@@ -7,9 +7,6 @@
     "#lib/*": "./src/lib/*",
     "#lib/utils.js": "./src/lib/utils.ts"
   },
-  "engines": {
-    "bun": "1.4.x"
-  },
   "scripts": {
     "dev": "vp dev",
     "build": "vp build",
@@ -48,5 +45,8 @@
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0"
+  },
+  "engines": {
+    "bun": "1.4.x"
   }
 }
