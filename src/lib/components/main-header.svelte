@@ -5,16 +5,7 @@
 	import * as Select from '#lib/components/ui/select';
 	import { Tabs, TabsList, TabsTrigger } from '#lib/components/ui/tabs';
 	import ThemeToggle from './theme-toggle.svelte';
-	import { getVariantInfo, getVariantNumbers, labs } from '#lib/labs';
-	import { marked, Renderer } from 'marked';
-
-	const LAB_NUMBERS = [1, 2, 3, 4];
-
-	// Assignment Markdown ships with the repo and contains no HTML; escape any
-	// raw HTML tokens so {@html} can never execute markup from the MD file.
-	const assignmentRenderer = new Renderer();
-	assignmentRenderer.html = ({ text }) =>
-		text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+	import { getVariantFields, getVariantInfo, getVariantNumbers, labs } from '#lib/labs';
 
 	let activeLab = $state('1');
 	let variant = $state('8');
@@ -23,7 +14,7 @@
 	const lab = $derived(labs.find((l) => String(l.number) === activeLab) ?? labs[0]);
 	const variantNumbers = $derived(getVariantNumbers(lab));
 	const variantInfo = $derived(getVariantInfo(lab, Number(variant)));
-	const assignmentHtml = $derived(marked.parse(lab.assignment, { renderer: assignmentRenderer }) as string);
+	const variantFields = $derived(getVariantFields(variantInfo));
 </script>
 
 <header class="sticky top-0 z-10 border-b border-foreground/10 bg-background">
@@ -39,13 +30,13 @@
 			<Button size="sm" onclick={() => (assignmentOpen = true)}>Задание</Button>
 			<Tabs bind:value={activeLab}>
 				<TabsList>
-					{#each LAB_NUMBERS as labNumber (labNumber)}
-						<TabsTrigger value={String(labNumber)} disabled={labNumber !== 1}>
-							{#if activeLab === String(labNumber)}
-								<span class="sm:hidden">ЛР {labNumber}</span>
-								<span class="hidden sm:inline">Лабораторная работа {labNumber}</span>
+					{#each labs as item (item.number)}
+						<TabsTrigger value={String(item.number)} disabled={item.number !== 1}>
+							{#if activeLab === String(item.number)}
+								<span class="sm:hidden">ЛР {item.number}</span>
+								<span class="hidden sm:inline">Лабораторная работа {item.number}</span>
 							{:else}
-								{labNumber}
+								{item.number}
 							{/if}
 						</TabsTrigger>
 					{/each}
@@ -71,12 +62,10 @@
 	>
 		{#snippet badges()}
 			<Badge variant="secondary">Вариант: {variant}</Badge>
-			<Badge variant="secondary">Вид: {variantInfo?.вид ?? '—'}</Badge>
-			<Badge variant="secondary">Язык: {variantInfo?.язык ?? '—'}</Badge>
+			{#each variantFields as [key, value] (key)}
+				<Badge variant="secondary">{key}: {String(value)}</Badge>
+			{/each}
 		{/snippet}
-		<!-- Assignment Markdown from the lab's assignment.md, rendered as sanitized HTML -->
-		<div class="prose prose-sm dark:prose-invert max-w-none">
-			{@html assignmentHtml}
-		</div>
+		<p class="text-sm leading-relaxed whitespace-pre-wrap">{lab.task}</p>
 	</ModalOrDrawer>
 </header>

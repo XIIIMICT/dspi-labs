@@ -16,9 +16,9 @@
 		TableRow,
 	} from '#lib/components/ui/table';
 	import PageHeader from '#lib/components/page-header.svelte';
-	import { appStore as app } from '#lib/labs/lab-1/store.svelte';
-	import type { TermInfo } from '#lib/labs/lab-1/models';
-	import { goBack } from '#lib/labs/lab-1/navigation';
+	import { appStore as app } from '#lib/labs/inverted-index/store.svelte';
+	import type { TermInfo } from '#lib/labs/inverted-index/models';
+	import { goBack } from '#lib/labs/inverted-index/navigation';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';

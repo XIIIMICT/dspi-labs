@@ -10,10 +10,10 @@ import {
   stem,
   tokenizeAndNormalize,
   removeStopWords,
-} from "../src/lib/labs/lab-1/text-processing.ts";
-import { InvertedIndexBuilder } from "../src/lib/labs/lab-1/inverted-index-builder.ts";
-import { generateDemoCollection } from "../src/lib/labs/lab-1/demo-texts.ts";
-import type { Document } from "../src/lib/labs/lab-1/models.ts";
+} from "../src/lib/labs/inverted-index/text-processing.ts";
+import { InvertedIndexBuilder } from "../src/lib/labs/inverted-index/inverted-index-builder.ts";
+import { generateDemoCollection } from "../src/lib/labs/inverted-index/demo-texts.ts";
+import type { Document } from "../src/lib/labs/inverted-index/models.ts";
 
 // --- Стемминг (порт stem(): перебор суффиксов, обрезка при остатке > 2) ---
 assert.equal(stem("кошки"), "кошк"); // «ы» срезается

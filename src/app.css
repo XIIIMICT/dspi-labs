@@ -3,8 +3,6 @@
 @import "shadcn-svelte/tailwind.css";
 @import "@fontsource-variable/geist";
 
-@plugin "@tailwindcss/typography";
-
 @custom-variant dark (&:is(.dark *));
 
 @layer base {

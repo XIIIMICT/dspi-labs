@@ -1,43 +1,41 @@
-import assignment from "./lab-1/assignment.md?raw";
-import variants from "./lab-1/variants.json";
+import registry from "./registry.json";
 
-/** Словарь вариантов лабораторной: номера вариантов + вид и язык работы. */
+/** A variant dictionary: a set of variant numbers plus lab-specific fields. */
 export interface LabVariant {
-  /** Номера вариантов, которым соответствует этот словарь. */
   variants: number[];
-  /** Вид работы. */
-  вид: string;
-  /** Язык. */
-  язык: string;
+  [key: string]: unknown;
 }
 
-/** Лабораторная работа: текст задания (MD) и словари вариантов. */
+/** A lab entry from registry.json; its 1-based number is its array position. */
 export interface LabDefinition {
-  /** Номер лабораторной (вкладка в шапке). */
-  number: number;
-  /** Полное название. */
+  /** Full lab title (also used as the dialog description). */
   title: string;
-  /** Текст задания в Markdown. */
-  assignment: string;
-  /** Словари вариантов; конкретный вариант ищется по полю variants. */
+  /** Semantic folder name under src/lib/labs/. */
+  folder: string;
+  /** Plain-text assignment, shown verbatim (whitespace preserved). */
+  task: string;
+  /** Variant dictionaries; a specific variant is found via its `variants` set. */
   variants: LabVariant[];
+  /** 1-based ordinal number, derived from the registry order. */
+  number: number;
 }
 
-export const labs: LabDefinition[] = [
-  {
-    number: 1,
-    title: "Инвертированный индекс и словарь",
-    assignment,
-    variants,
-  },
-];
+export const labs: LabDefinition[] = (registry as Omit<LabDefinition, "number">[]).map(
+  (entry, index) => ({ ...entry, number: index + 1 }),
+);
 
-/** Все номера вариантов лабы по возрастанию — пункты селекта в шапке. */
+/** All variant numbers of a lab, ascending — the header select items. */
 export function getVariantNumbers(lab: LabDefinition): number[] {
   return [...new Set(lab.variants.flatMap((entry) => entry.variants))].sort((a, b) => a - b);
 }
 
-/** Словарь, которому соответствует данный номер варианта. */
+/** The variant dictionary matching a given variant number. */
 export function getVariantInfo(lab: LabDefinition, variant: number): LabVariant | undefined {
   return lab.variants.find((entry) => entry.variants.includes(variant));
+}
+
+/** Lab-specific fields of a variant dictionary, excluding `variants` itself. */
+export function getVariantFields(info: LabVariant | undefined): [string, unknown][] {
+  if (!info) return [];
+  return Object.entries(info).filter(([key]) => key !== "variants");
 }

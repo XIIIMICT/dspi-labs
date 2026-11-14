@@ -11,9 +11,9 @@
 	import { Separator } from '#lib/components/ui/separator';
 	import MainHeader from '#lib/components/main-header.svelte';
 	import ModalOrDrawer from '#lib/components/modal-or-drawer.svelte';
-	import { appStore as app } from '#lib/labs/lab-1/store.svelte';
-	import type { Document } from '#lib/labs/lab-1/models';
-	import { findWords } from '#lib/labs/lab-1/text-processing';
+	import { appStore as app } from '#lib/labs/inverted-index/store.svelte';
+	import type { Document } from '#lib/labs/inverted-index/models';
+	import { findWords } from '#lib/labs/inverted-index/text-processing';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import InfoIcon from '@lucide/svelte/icons/info';
