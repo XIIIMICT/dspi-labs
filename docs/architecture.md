@@ -68,8 +68,13 @@ ONE deliberate deviation: a bare `"о"` suffix is appended so neuter forms
 manual's illustrative Table 3. The manual prescribes no normalization
 algorithm, so this is an implementation choice, not a compliance fix; the
 naive stripper can over-merge («метро» → «метр»). See
-`docs/requirements-matrix.md`. The screens moved from the root page into `inverted-index/lab1-view.svelte`;
-`/invertedIndex` and `/search/[docId]/[query]` routes are untouched.
+`docs/requirements-matrix.md`. The screens moved from the root page into
+`inverted-index/lab1-view.svelte`, now a thin orchestrator composing five
+cohesive subcomponents (`documents-panel.svelte`, `search-card.svelte`,
+`diagnostics-card.svelte`, `log-panel.svelte`, `document-modal.svelte`). They
+read `appStore` directly; the sibling search card and document modal share
+`view-state.svelte.ts` for the open-document viewer state instead of a new
+props/context layer. `/invertedIndex` and `/search/[docId]/[query]` routes are untouched.
 
 Explicit additions for the registered variant («Гибридная схема», 2/8/14):
 
