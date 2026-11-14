@@ -182,17 +182,29 @@ assert.equal(cat.postings[0].termFrequency, 3);
 // The hybrid structure itself is inspectable and block-based.
 assert.ok(builder.hybridDictionary.get("кошк")!.head !== null);
 
-// --- Alphabetical term output (manual's required representation) ---
-const alphabeticallySorted = [...index.values()]
-  .map((info) => info.term)
-  .sort((a, b) => a.localeCompare(b, "ru"));
+// --- Alphabetical term output: the real shared helper, not a local re-sort ---
+import {
+  compareTerms,
+  sortTermsAlphabetically,
+} from "../../src/lib/labs/inverted-index/sort-terms.ts";
+
+// Deliberately unsorted input, including Cyrillic/Ё representatives.
+const unsorted = ["яблоко", "Документ", "ёж", "алгоритм", "Ель", "база", "Азбука"];
+assert.deepEqual(sortTermsAlphabetically(unsorted), [
+  "Азбука",
+  "алгоритм",
+  "база",
+  "Документ",
+  "ёж",
+  "Ель",
+  "яблоко",
+]);
+assert.ok(compareTerms("алгоритм", "база") < 0);
+assert.ok(compareTerms("Ель", "ёж") !== 0); // ё is a distinct letter, not silently merged
+// The index view sorts by the very same comparator.
 assert.deepEqual(
-  [...index.values()].map((info) => info.term).sort((a, b) => a.localeCompare(b, "ru")),
-  alphabeticallySorted,
-);
-assert.ok(
-  alphabeticallySorted[0] < alphabeticallySorted[alphabeticallySorted.length - 1],
-  "Russian alphabetical order is defined",
+  [...index.values()].map((info) => info.term).sort(compareTerms),
+  sortTermsAlphabetically([...index.values()].map((info) => info.term)),
 );
 
 // --- Inspectable diagnostics (not a proof of thematic similarity) ---

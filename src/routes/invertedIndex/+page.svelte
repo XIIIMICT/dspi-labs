@@ -17,6 +17,7 @@
 	} from '#lib/components/ui/table';
 	import PageHeader from '#lib/components/page-header.svelte';
 	import { appStore as app } from '#lib/labs/inverted-index/store.svelte';
+	import { compareTerms } from '#lib/labs/inverted-index/sort-terms';
 	import type { TermInfo } from '#lib/labs/inverted-index/models';
 	import { goBack } from '#lib/labs/inverted-index/navigation';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
@@ -32,7 +33,7 @@
 	// The manual's term/document list is sorted alphabetically; frequency
 	// remains visible as a secondary badge on each row.
 	const sortedTerms = $derived(
-		[...app.dictionary.values()].sort((a, b) => a.term.localeCompare(b.term, 'ru')),
+		[...app.dictionary.values()].sort((a, b) => compareTerms(a.term, b.term)),
 	);
 	const filteredTerms = $derived.by(() => {
 		const query = filter.trim().toLowerCase();

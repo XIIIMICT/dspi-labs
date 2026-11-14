@@ -24,7 +24,7 @@ export function validateEvaluationText(name: string, text: string): string[] {
   const wordCount = countEnglishWords(text);
   if (wordCount < MIN_WORDS_PER_TEXT) {
     problems.push(
-      `Файл «${name}»: ${wordCount} английских слов — требуется не менее ${MIN_WORDS_PER_TEXT} (язык текстов по варианту — английский)`,
+      `Файл «${name}»: ${wordCount} латинских токенов — требуется не менее ${MIN_WORDS_PER_TEXT} (язык текстов по варианту — английский; проверка считает токены, но не определяет язык)`,
     );
   }
   return problems;

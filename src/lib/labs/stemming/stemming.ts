@@ -86,7 +86,9 @@ export function countWords(text: string): number {
 
 /**
  * Stems a hyphenated compound by looking up each letter part independently
- * (`кто-то`, `по-русски`); parts shorter than 2 letters pass through as-is.
+ * (`кто-то`, `по-русски`). Parts shorter than 2 letters are SKIPPED (no
+ * dictionary lookup happens), so they are reported as unmatched with a null
+ * stem — never as a fabricated exact dictionary hit.
  */
 export function lookupHyphenated(word: string): StemLookup[] {
   const parts = word.split("-");
@@ -97,8 +99,8 @@ export function lookupHyphenated(word: string): StemLookup[] {
       : {
           source: part,
           lookup: part.toLowerCase(),
-          stem: part.toLowerCase(),
-          match: "exact" as const,
+          stem: null,
+          match: "none" as const,
         },
   );
 }

@@ -78,10 +78,16 @@ Explicit additions for the registered variant («Гибридная схема»
   collection and index stay intact; Russian errors are shown. Stable IDs are
   assigned only to accepted documents. `collectionDiagnostics()` exposes
   inspectable repetition evidence — it does NOT claim to prove semantic
-  thematic similarity.
-- `/invertedIndex` sorts terms alphabetically (the manual's representation);
-  frequency remains a secondary badge. The Lab 1 view shows the variant,
-  per-document processing stages (source lexemes, normalized terms, postings),
+  thematic similarity. The strict «exactly 100» count is the app's explicit
+  validation interpretation of the assignment's «для 100 документов» (the
+  manual does not literally say «ровно»), and the `\p{L}+` count is a token
+  count, not a Russian-language detector.
+- `/invertedIndex` sorts terms alphabetically via the shared pure helper
+  `sort-terms.ts` (`Intl.Collator("ru")`), asserted against deliberately
+  unsorted input in `tests/labs/lab1-validation.test.mts`; frequency remains
+  a secondary badge. The Lab 1 view shows the variant, per-document processing
+  stages (full source text in a scrollable panel, explicit «показано X из Y»
+  counts with a «Показать полностью» toggle for lexemes/normalized terms/postings),
   and repeat diagnostics.
 - Validation + hybrid-structure tests: `tests/labs/lab1-validation.test.mts`.
 
@@ -111,12 +117,16 @@ Variant 2/8/14: SHA-1, 8-word shingles, English texts. The manual's pipeline:
 
 1. **Canonicalization** — lowercase, English letters only, HTML-like tags and
    digits as separators, stop words (the manual's «вспомогательные единицы»)
-   removed, plus conservative offline singularization of common plural nouns.
-   The manual's requirement is stated in Russian morphological terms
-   («приведение имен существительных в именительный падеж, единственное
-   число»); for English this is a documented approximation, NOT full
-   POS-aware lemmatization. Root reduction («иногда») is deliberately not
-   applied. The source text is never mutated.
+   removed, plus conservative offline singularization of KNOWN plural nouns
+   (a `Map` of irregular forms + guarded regular candidates confirmed against
+   a local singular list). The manual's requirement is stated in Russian
+   morphological terms («приведение имен существительных в именительный
+   падеж, единственное число»); for English this is a documented
+   approximation, NOT full морфологическая лемматизация с определением части
+   речи (POS-aware lemmatization). Common singular/non-noun words and inherited
+   object properties are preserved. Root reduction («иногда») is deliberately
+   not applied. The source text is never mutated. Latin-letter token counting
+   is a quantity check, NOT a language detector.
 2. **Shingling** — overlapping (`внахлест`) sequences of W canonical tokens;
    count = tokens − W + 1.
 3. **Hashing** — 84 static hash functions: SHA-1 of `${salt}:${shingleText}`

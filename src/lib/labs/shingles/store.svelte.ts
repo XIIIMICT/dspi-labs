@@ -46,13 +46,15 @@ export function validateLab3Candidate(
   const problems: string[] = [];
   const wordCount = countEnglishWords(text);
   if (wordCount === 0) {
-    problems.push(`«${name}»: текст не содержит английских слов`);
+    problems.push(`«${name}»: текст не содержит латинских слов`);
     return problems;
   }
   if (wordCount < MIN_WORDS_PER_TEXT) {
     problems.push(
-      `«${name}»: ${wordCount} английских слов — требуется не менее ${MIN_WORDS_PER_TEXT}` +
-        (languageHint === "английский" ? ". По варианту задания язык текстов — английский" : ""),
+      `«${name}»: ${wordCount} латинских токенов — требуется не менее ${MIN_WORDS_PER_TEXT}` +
+        (languageHint === "английский"
+          ? ". По варианту задания язык текстов — английский; проверка считает токены, но не определяет язык"
+          : ""),
     );
   }
   return problems;

@@ -107,6 +107,31 @@ assert.equal(stemText("документ-ксилофон").words[0].match, "pref
 assert.equal(stemText("ксилофон-баян").words[0].match, "none");
 assert.equal(stemText("ксилофон-баян").words[0].stem, null);
 
+// --- One-letter hyphen parts are skipped, never a dictionary "hit" ---
+assert.deepEqual(
+  lookupHyphenated("а-ксилофон").map((p) => [p.source, p.stem, p.match]),
+  [
+    ["а", null, "none"],
+    ["ксилофон", null, "none"],
+  ],
+);
+const shortPartUnknown = stemText("а-ксилофон");
+assert.equal(shortPartUnknown.words[0].stem, null);
+assert.equal(shortPartUnknown.words[0].match, "none");
+assert.equal(shortPartUnknown.matched, 0);
+assert.equal(renderStemmedText("а-ксилофон", shortPartUnknown), "а-ксилофон");
+const shortPartKnown = stemText("документ-б");
+assert.deepEqual(
+  lookupHyphenated("документ-б").map((p) => p.match),
+  ["exact", "none"],
+);
+assert.equal(shortPartKnown.words[0].stem, "документ-б"); // original part preserved
+assert.equal(shortPartKnown.words[0].match, "prefix"); // honest: not all-exact
+assert.equal(shortPartKnown.matched, 1); // one word matched, not two "hits"
+assert.equal(renderStemmedText("документ-б", shortPartKnown), "документ-б");
+// Ordinary compound whose parts are both genuinely looked up.
+assert.equal(stemText("документ-индекс").words[0].match, "exact");
+
 // --- Word-by-word mapping evidence ---
 const table = stemText("документы документами");
 assert.deepEqual(

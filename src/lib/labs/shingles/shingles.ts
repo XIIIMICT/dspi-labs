@@ -5,12 +5,12 @@
  * Manual (Методичка, ЛР 3, «Методические указания») pipeline, in order:
  *   1) канонизация — lowercase, strip punctuation/tags/digits, remove
  *      auxiliary words (prepositions/conjunctions — stop words), and bring
- *      nouns to a nominative singular form. The manual describes this stage
- *      in Russian morphological terms; for English the implemented, honestly
- *      scoped equivalent is a deterministic offline singularization of common
- *      plural nouns (regular endings + a small irregular map). This is NOT
- *      full POS-aware lemmatization, and root reduction remains an optional,
- *      deliberately unused step (the manual says «иногда»).
+ *      known plural nouns to a singular base form. The manual describes this
+ *      stage in Russian morphological terms; for English this is a documented
+ *      conservative offline approximation: a `Map` of irregular plurals plus
+ *      guarded regular candidates confirmed against a local singular list.
+ *      It is NOT POS-aware lemmatization, and root reduction («иногда»)
+ *      remains an optional, deliberately unused step.
  *   2) разбиение на шинглы — overlapping sequences of W consecutive canonical
  *      tokens («внахлест»), count = tokens − W + 1;
  *   3) вычисление хэшей — for each of the 84 static hash functions compute a
@@ -121,41 +121,142 @@ const STOP_WORDS = new Set([
 ]);
 
 /**
- * Deterministic, offline English singularization. Scope is intentionally
- * narrow: common regular plural endings and a small irregular map. Words that
- * are not clearly plural are returned unchanged; this is not a claim of full
- * morphological coverage (see module doc).
+ * Deterministic, offline, conservative English singularization — NOT
+ * POS-aware lemmatization and NOT a language detector.
+ *
+ * Blanket `-s` stripping corrupts ordinary words (`news → new`,
+ * `series → sery`, `always → alway`), so suffix rules only GENERATE a
+ * candidate. A candidate is accepted only when it is present in
+ * `KNOWN_SINGULARS` (a local offline list); every other token is returned
+ * unchanged. Irregular forms live in a `Map` so inherited object properties
+ * (`constructor`, `toString`) can never leak a function into canonical output.
+ * Scope and limitations are documented in `docs/requirements-matrix.md`.
  */
-const IRREGULAR_PLURALS: Record<string, string> = {
-  children: "child",
-  men: "man",
-  women: "woman",
-  people: "person",
-  feet: "foot",
-  teeth: "tooth",
-  geese: "goose",
-  mice: "mouse",
-  oxen: "ox",
-  data: "datum",
-  indices: "index",
-  matrices: "matrix",
-  analyses: "analysis",
-  bases: "basis",
-  crises: "crisis",
-  phenomena: "phenomenon",
-};
 
-/** Singularizes one lowercase English token when it is clearly a plural. */
-export function singularize(token: string): string {
-  const irregular = IRREGULAR_PLURALS[token];
-  if (irregular !== undefined) return irregular;
-  // -ies → -y (companies → company), but never a bare "ies".
-  if (token.length > 4 && token.endsWith("ies")) return `${token.slice(0, -3)}y`;
-  // -sses/-shes/-ches/-xes/-zes → drop "es" (classes → class, boxes → box).
-  if (token.length > 4 && /(?:ss|sh|ch|x|z)es$/.test(token)) {
-    return token.slice(0, -2);
+/** Irregular plural → singular (prototype-safe: no object property lookup). */
+const IRREGULAR_PLURALS = new Map<string, string>([
+  ["children", "child"],
+  ["men", "man"],
+  ["women", "woman"],
+  ["people", "person"],
+  ["feet", "foot"],
+  ["teeth", "tooth"],
+  ["geese", "goose"],
+  ["mice", "mouse"],
+  ["oxen", "ox"],
+  ["data", "datum"],
+  ["indices", "index"],
+  ["matrices", "matrix"],
+  ["analyses", "analysis"],
+  ["bases", "basis"],
+  ["crises", "crisis"],
+  ["phenomena", "phenomenon"],
+]);
+
+/**
+ * Local offline list of base noun forms. A generated singular candidate is
+ * accepted only if it appears here; this is the guard that keeps `news`,
+ * `series`, `species`, `physics`, `always`, `various`, and `alias` intact.
+ */
+const KNOWN_SINGULARS = new Set<string>([
+  "analysis",
+  "author",
+  "basis",
+  "block",
+  "box",
+  "cat",
+  "child",
+  "city",
+  "class",
+  "collection",
+  "company",
+  "component",
+  "computer",
+  "crisis",
+  "datum",
+  "day",
+  "document",
+  "dog",
+  "element",
+  "engine",
+  "error",
+  "event",
+  "file",
+  "form",
+  "fox",
+  "function",
+  "group",
+  "hash",
+  "hero",
+  "index",
+  "line",
+  "list",
+  "man",
+  "matrix",
+  "method",
+  "model",
+  "mouse",
+  "node",
+  "number",
+  "object",
+  "operation",
+  "ox",
+  "page",
+  "pair",
+  "part",
+  "person",
+  "phrase",
+  "point",
+  "position",
+  "potato",
+  "process",
+  "program",
+  "query",
+  "record",
+  "request",
+  "result",
+  "row",
+  "rule",
+  "sample",
+  "section",
+  "sentence",
+  "server",
+  "set",
+  "shingle",
+  "source",
+  "string",
+  "structure",
+  "system",
+  "table",
+  "term",
+  "text",
+  "token",
+  "tomato",
+  "tool",
+  "topic",
+  "tree",
+  "user",
+  "value",
+  "word",
+  "worker",
+]);
+
+/**
+ * Generates plausible singular candidates from a token ending in `s`.
+ * These are only candidates — `singularize()` confirms them against
+ * `KNOWN_SINGULARS` before accepting one.
+ */
+function singularCandidates(token: string): string[] {
+  const candidates: string[] = [];
+  if (token.length > 4 && token.endsWith("ies")) {
+    candidates.push(`${token.slice(0, -3)}y`); // companies → company
   }
-  // General -s plural: keep singular words ending in -ss/-us/-is.
+  if (token.length > 4 && /(?:ss|sh|ch|x|z)es$/.test(token)) {
+    candidates.push(token.slice(0, -2)); // classes → class, boxes → box
+  }
+  if (token.length > 4 && token.endsWith("oes")) {
+    candidates.push(token.slice(0, -2)); // heroes → hero
+  }
   if (
     token.length > 3 &&
     token.endsWith("s") &&
@@ -163,7 +264,18 @@ export function singularize(token: string): string {
     !token.endsWith("us") &&
     !token.endsWith("is")
   ) {
-    return token.slice(0, -1);
+    candidates.push(token.slice(0, -1)); // cats → cat
+  }
+  return candidates;
+}
+
+/** Returns the singular for a known plural, otherwise the token unchanged. */
+export function singularize(token: string): string {
+  const irregular = IRREGULAR_PLURALS.get(token);
+  if (irregular !== undefined) return irregular;
+  if (!token.endsWith("s")) return token;
+  for (const candidate of singularCandidates(token)) {
+    if (KNOWN_SINGULARS.has(candidate)) return candidate;
   }
   return token;
 }
@@ -192,7 +304,12 @@ export function contentKey(text: string): string {
   return text.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-/** Counts English words (letter sequences) — the ≥1000-word contract check. */
+/**
+ * Counts Latin-letter tokens (`[a-z]+` sequences). This is a TOKEN COUNT, not
+ * a language detector: French, Spanish, German, invented words, and other
+ * Latin-script text also pass. The ≥1000-token check validates quantity only;
+ * supplying text in the variant's language remains the user's responsibility.
+ */
 export function countEnglishWords(text: string): number {
   let count = 0;
   for (const _match of text.matchAll(/[a-z]+/gi)) count += 1;

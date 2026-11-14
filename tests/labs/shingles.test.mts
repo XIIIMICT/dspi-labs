@@ -35,20 +35,43 @@ const frozen = source.slice();
 canonicalize(source);
 assert.equal(source, frozen);
 
-// --- Conservative English singularization (documented scope, not full POS) ---
+// --- Conservative singularization: known plurals normalize, common
+// singular/non-noun words and inherited object properties stay intact ---
 assert.equal(singularize("cats"), "cat");
-assert.equal(singularize("classes"), "class");
 assert.equal(singularize("boxes"), "box");
+assert.equal(singularize("classes"), "class");
 assert.equal(singularize("companies"), "company");
+assert.equal(singularize("heroes"), "hero");
+assert.equal(singularize("documents"), "document");
 assert.equal(singularize("children"), "child");
 assert.equal(singularize("men"), "man");
 assert.equal(singularize("indices"), "index");
-// Words that are singular or ambiguous stay unchanged.
-assert.equal(singularize("bus"), "bus");
-assert.equal(singularize("class"), "class");
-assert.equal(singularize("analysis"), "analysis");
-assert.equal(singularize("this"), "this");
-// Plural forms canonicalize to the same token as their singular counterparts.
+assert.equal(singularize("mice"), "mouse");
+// Blanket suffix stripping would corrupt these ordinary words.
+for (const word of [
+  "news",
+  "series",
+  "species",
+  "physics",
+  "always",
+  "various",
+  "alias",
+  "bus",
+  "class",
+  "analysis",
+  "this",
+  "constructor",
+  "toString",
+  "hasOwnProperty",
+]) {
+  assert.equal(singularize(word), word, `${word} must not be corrupted`);
+  assert.equal(typeof singularize(word), "string", `${word} must stay a string`);
+}
+// Prototype-safe lookup: no function/object can leak into canonical tokens.
+assert.deepEqual(canonicalize("constructor"), ["constructor"]);
+assert.deepEqual(canonicalize("toString hasOwnProperty"), ["tostring", "hasownproperty"]);
+assert.ok(canonicalize("the cats and news").every((t) => typeof t === "string"));
+// Plural/singular forms canonicalize to the same token.
 assert.deepEqual(canonicalize("cat cats CATS"), ["cat", "cat", "cat"]);
 assert.deepEqual(canonicalize("a box boxes"), ["box", "box"]);
 

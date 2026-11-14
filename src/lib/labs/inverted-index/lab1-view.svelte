@@ -55,6 +55,22 @@
 	const shownDoc = $derived(viewDoc);
 	const docWordCount = $derived(shownDoc ? findWords(shownDoc.rawText).length : 0);
 
+	/** Per-document algorithm stages, computed once for the open document. */
+	const sourceLexemes = $derived(shownDoc ? findWords(shownDoc.rawText).map((w) => w.word) : []);
+	const normalizedLexemes = $derived(
+		shownDoc ? removeStopWords(tokenizeAndNormalize(shownDoc.rawText)) : [],
+	);
+	const docPostings = $derived(
+		shownDoc
+			? [...app.dictionary.entries()].filter(([, info]) =>
+					info.postings.some((p) => p.docId === shownDoc.id),
+				)
+			: [],
+	);
+	/** Preview limits keep the modal responsive; "show full" removes them. */
+	const PREVIEW_LIMITS = { lexemes: 200, normalized: 400, postings: 30 } as const;
+	let showFullStages = $state(false);
+
 	function onFilePick(event: Event): void {
 		const input = event.currentTarget as HTMLInputElement;
 		const files = Array.from(input.files ?? []);
@@ -229,6 +245,7 @@
 									class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
 									onclick={() => {
 										viewDoc = doc;
+										showFullStages = false;
 										viewOpen = true;
 									}}
 								>
@@ -357,6 +374,20 @@
 		{/snippet}
 		{#if shownDoc}
 			<div class="flex flex-col gap-2">
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<p class="text-muted-foreground text-xs">
+						Этапы показаны в порядке алгоритма; исходный текст приведён целиком в прокручиваемой
+						панели. Превью лексем, терминов и постингов ограничено — нажмите «Показать
+						полностью», чтобы увидеть все данные.
+					</p>
+					<Button
+						size="sm"
+						variant="outline"
+						onclick={() => (showFullStages = !showFullStages)}
+					>
+						{showFullStages ? 'Свернуть до превью' : 'Показать полностью'}
+					</Button>
+				</div>
 				<Collapsible>
 					<CollapsibleTrigger class="group flex w-full items-center gap-2 text-left text-sm font-medium">
 						<ChevronRightIcon
@@ -369,12 +400,14 @@
 					</CollapsibleTrigger>
 					<CollapsibleContent>
 						<div class="mt-2 flex flex-col gap-2 text-sm">
+							<p class="text-muted-foreground text-xs">
+								Исходный текст: полностью ({shownDoc.rawText.length} символов). Исходные лексемы:
+								показано {showFullStages ? sourceLexemes.length : Math.min(PREVIEW_LIMITS.lexemes, sourceLexemes.length)} из
+								{sourceLexemes.length}.
+							</p>
 							<pre class="bg-muted/30 max-h-48 overflow-auto rounded-md border p-2 whitespace-pre-wrap">{shownDoc.rawText}</pre>
 							<p class="text-muted-foreground font-mono text-xs">
-								{findWords(shownDoc.rawText)
-									.slice(0, 200)
-									.map((w) => w.word)
-									.join(' ')}
+								{(showFullStages ? sourceLexemes : sourceLexemes.slice(0, PREVIEW_LIMITS.lexemes)).join(' ')}
 							</p>
 						</div>
 					</CollapsibleContent>
@@ -390,10 +423,12 @@
 						Этап 3: нормализованные лексемы (после стоп-слов)
 					</CollapsibleTrigger>
 					<CollapsibleContent>
-						<p class="bg-muted/30 mt-2 max-h-48 overflow-auto rounded-md border p-2 font-mono text-xs whitespace-pre-wrap">
-							{removeStopWords(tokenizeAndNormalize(shownDoc.rawText))
-								.slice(0, 400)
-								.join(' ')}
+						<p class="text-muted-foreground mt-2 text-xs">
+							Показано {showFullStages ? normalizedLexemes.length : Math.min(PREVIEW_LIMITS.normalized, normalizedLexemes.length)} из
+							{normalizedLexemes.length} нормализованных лексем.
+						</p>
+						<p class="bg-muted/30 mt-1 max-h-48 overflow-auto rounded-md border p-2 font-mono text-xs whitespace-pre-wrap">
+							{(showFullStages ? normalizedLexemes : normalizedLexemes.slice(0, PREVIEW_LIMITS.normalized)).join(' ')}
 						</p>
 					</CollapsibleContent>
 				</Collapsible>
@@ -408,10 +443,12 @@
 						Этап 4: постинги и позиции в документе
 					</CollapsibleTrigger>
 					<CollapsibleContent>
-						<div class="mt-2 max-h-48 overflow-auto rounded-md border p-2 font-mono text-xs">
-							{#each [...app.dictionary.entries()]
-								.filter(([, info]) => info.postings.some((p) => p.docId === shownDoc.id))
-								.slice(0, 30) as [term, info] (term)}
+						<p class="text-muted-foreground mt-2 text-xs">
+							Показано {showFullStages ? docPostings.length : Math.min(PREVIEW_LIMITS.postings, docPostings.length)} из
+							{docPostings.length} терминов с постингами в этом документе.
+						</p>
+						<div class="mt-1 max-h-48 overflow-auto rounded-md border p-2 font-mono text-xs">
+							{#each (showFullStages ? docPostings : docPostings.slice(0, PREVIEW_LIMITS.postings)) as [term, info] (term)}
 								<div>
 									{term}: частота {info.postings.find((p) => p.docId === shownDoc.id)?.termFrequency},
 									позиции [{info.postings.find((p) => p.docId === shownDoc.id)?.positions.join(', ')}]

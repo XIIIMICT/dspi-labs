@@ -5,31 +5,11 @@
  */
 
 import { toast } from "svelte-sonner";
-import { countWords, stemText, type StemmingResult } from "./stemming";
+import type { StemmingResult } from "./stemming";
+import { applySourceState, type Lab2Source } from "./source-state";
 
-/** The assignment's minimum word count for the imported text. */
-export const MIN_WORDS = 100;
-
-/** A text selected for processing (from a file or typed in). */
-export interface Lab2Source {
-  name: string;
-  text: string;
-}
-
-/**
- * Validates a source against the assignment contract. Pure, so tests can
- * check the rejection rules without the Svelte store.
- */
-export function validateLab2Source(source: Lab2Source): string[] {
-  const problems: string[] = [];
-  const words = countWords(source.text);
-  if (words === 0) {
-    problems.push("Текст не содержит ни одного слова");
-  } else if (words < MIN_WORDS) {
-    problems.push(`Текст содержит ${words} слов — требуется не менее ${MIN_WORDS}`);
-  }
-  return problems;
-}
+export { MIN_WORDS, validateLab2Source } from "./source-state";
+export type { Lab2Source } from "./source-state";
 
 class StemmingStore {
   source = $state<Lab2Source | null>(null);
@@ -61,23 +41,24 @@ class StemmingStore {
 
   /** Validates the word-count contract and runs dictionary stemming. */
   applySource(source: Lab2Source): void {
-    this.source = source;
-    this.result = null;
-
-    const problems = validateLab2Source(source);
-    if (problems.length > 0) {
-      this.errors = problems;
+    // Validate BEFORE touching the active source/result: a rejected
+    // replacement must never discard the last successful result.
+    const decision = applySourceState(source, { source: this.source, result: this.result });
+    if (!decision.ok) {
+      this.errors = decision.errors;
       return;
     }
-
-    this.errors = [];
-    this.result = stemText(source.text);
+    this.source = decision.next.source;
+    this.result = decision.next.result;
+    this.errors = decision.next.errors;
     toast.success(
-      `Обработка завершена: ${this.result.totalWords} слов, ${this.result.matched} найдено в словаре`,
+      `Обработка завершена: ${decision.next.result.totalWords} слов, ${decision.next.result.matched} найдено в словаре`,
     );
   }
 
   reset(): void {
+    // A late async file read must not restore state after an explicit reset.
+    if (this.isProcessing) return;
     this.source = null;
     this.result = null;
     this.errors = [];
