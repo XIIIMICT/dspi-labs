@@ -6,10 +6,15 @@
 
 import { toast } from "svelte-sonner";
 import { InvertedIndexBuilder } from "./inverted-index-builder";
-import { loadFromSources, sourcesFromFiles } from "./document-loader";
+import { loadFromSources, sourcesFromFiles, unsupportedFileNames } from "./document-loader";
+import {
+  collectionDiagnostics,
+  validateCollection,
+  type CollectionDiagnostics,
+} from "./collection-validation";
 import { generateDemoCollection } from "./demo-texts";
 import type { Document, DocumentSource, TermInfo } from "./models";
-import { findWordForms, stem } from "./text-processing";
+import { findWordForms, stem, tokenizeAndNormalize } from "./text-processing";
 
 /** The log keeps at most this many lines (the original showed the last 200). */
 const MAX_LOG_ENTRIES = 500;
@@ -23,6 +28,12 @@ class AppStore {
 
   /** Timestamped step log (`logs` in MainActivity). */
   logs = $state<string[]>([]);
+
+  /** Inspectable repetition evidence (not a proof of thematic similarity). */
+  diagnostics = $state<CollectionDiagnostics | null>(null);
+
+  /** Collection-level validation errors, shown in Russian. */
+  errors = $state<string[]>([]);
 
   /** Search input (MainViewModel.searchQuery). */
   searchQuery = $state("");
@@ -47,37 +58,67 @@ class AppStore {
 
   /** Loads user-selected files (steps 1–6 of the original program). */
   async loadFromFiles(files: File[]): Promise<void> {
-    await this.loadSources(sourcesFromFiles(files), "Начало загрузки выбранных документов...");
+    const rejected = unsupportedFileNames(files);
+    const sources = sourcesFromFiles(files);
+    const errors = rejected.map((name) => `Файл «${name}»: ожидается текстовый файл (.txt)`);
+    await this.loadSources(sources, "Начало загрузки выбранных документов...", errors);
   }
 
   /** Loads the built-in demo collection of 100 thematic texts. */
   async loadDemoCollection(): Promise<void> {
-    await this.loadSources(generateDemoCollection(), "Начало загрузки демо-текстов...");
+    await this.loadSources(generateDemoCollection(), "Начало загрузки демо-текстов...", []);
   }
 
-  private async loadSources(sources: DocumentSource[], startMessage: string): Promise<void> {
+  /**
+   * Validates the replacement collection BEFORE touching current state. On
+   * failure the loaded documents/index stay intact and every problem is
+   * reported; on success the new collection gets stable sequential IDs.
+   */
+  private async loadSources(
+    sources: DocumentSource[],
+    startMessage: string,
+    boundaryErrors: string[],
+  ): Promise<void> {
     if (this.isProcessing) return;
     this.isProcessing = true;
-
-    this.documents = [];
-    this.dictionary = new Map();
-    this.foundForms = [];
-    this.searchStem = "";
+    this.errors = [];
 
     try {
       this.emitStep(startMessage);
-      const docs = await loadFromSources(sources, (m) => this.emitStep(m));
-      this.documents = docs;
-
-      if (docs.length > 0) {
-        this.emitStep("Построение инвертированного индекса...");
-        const builder = new InvertedIndexBuilder();
-        const dictionary = await builder.build(docs, (m) => this.emitStep(m));
-        this.dictionary = dictionary;
-        this.emitStep("Индекс построен");
-      } else {
-        toast.warning("Не удалось загрузить ни одного документа");
+      const validation = await validateCollection(sources);
+      const errors = [...boundaryErrors, ...validation.errors];
+      for (const problem of errors) this.emitStep(problem);
+      if (errors.length > 0) {
+        this.errors = errors;
+        toast.error("Коллекция не загружена: проверьте файлы");
+        return;
       }
+
+      // Validation passed — load again from the same sources (readers are
+      // re-readable) and build the index. Only now replace current state.
+      const loaded = await loadFromSources(sources, (m) => this.emitStep(m));
+      const docs: Document[] = loaded.map((item, i) => ({
+        id: i + 1,
+        name: item.name,
+        path: item.path,
+        rawText: item.rawText,
+      }));
+
+      this.emitStep("Построение инвертированного индекса...");
+      const builder = new InvertedIndexBuilder();
+      const dictionary = await builder.build(docs, (m) => this.emitStep(m));
+
+      this.documents = docs;
+      this.dictionary = dictionary;
+      this.diagnostics = collectionDiagnostics(docs, (w) => stem(w), tokenizeAndNormalize);
+      this.foundForms = [];
+      this.searchStem = "";
+      this.emitStep("Индекс построен");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.errors.push(message);
+      this.emitStep(message);
+      toast.error("Коллекция не загружена: проверьте файлы");
     } finally {
       this.isProcessing = false;
     }
@@ -116,6 +157,8 @@ class AppStore {
     if (this.isProcessing) return;
     this.documents = [];
     this.dictionary = new Map();
+    this.diagnostics = null;
+    this.errors = [];
     this.foundForms = [];
     this.searchStem = "";
     this.searchQuery = "";

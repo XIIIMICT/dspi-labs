@@ -21,15 +21,28 @@
 
 <header class="sticky top-0 z-10 border-b border-foreground/10 bg-background">
 	<div class="mx-auto flex w-full max-w-4xl flex-col gap-2 px-4 py-3 sm:px-6">
-		<div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+		<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:justify-start">
 			<h1 class="min-w-0 flex-1 text-xl font-semibold tracking-tight sm:text-2xl">
 				<span class="sm:hidden">РСОИ</span>
 				<span class="hidden sm:inline">Распределённые системы обработки информации</span>
 			</h1>
+			<Button
+				size="sm"
+				class="sm:hidden"
+				onclick={() => (assignmentOpen = true)}
+			>
+				Задание
+			</Button>
 			<ThemeToggle />
 		</div>
 		<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-			<Button size="sm" onclick={() => (assignmentOpen = true)}>Задание</Button>
+			<Button
+				size="sm"
+				class="hidden sm:inline-flex"
+				onclick={() => (assignmentOpen = true)}
+			>
+				Задание
+			</Button>
 			<Tabs bind:value={shellStore.activeLab}>
 				<TabsList>
 					{#each labs as item (item.number)}

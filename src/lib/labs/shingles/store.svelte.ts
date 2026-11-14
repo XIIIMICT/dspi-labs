@@ -9,7 +9,9 @@ import { appStore } from "../inverted-index/store.svelte";
 import {
   buildSketch,
   compareAllPairs,
+  contentKey,
   countEnglishWords,
+  EmptySketchError,
   type ShingleComparison,
   type ShingleSketch,
 } from "./shingles";
@@ -69,49 +71,73 @@ class ShinglesStore {
     return toCorpus(appStore.documents);
   }
 
-  /** Reads `.txt` files, validates each, and appends valid ones. */
+  /** Clears computed results; called on every candidate-set mutation. */
+  private invalidateResults(): void {
+    this.results = [];
+    this.comparisons = [];
+  }
+
+  /**
+   * Reads `.txt` files, validates each, and appends valid ones. A single
+   * isProcessing guard covers the whole async read so concurrent selections
+   * can never race past the four-text limit.
+   */
   async addFiles(files: File[]): Promise<void> {
     if (this.isProcessing) return;
+    this.isProcessing = true;
     this.errors = [];
     const accepted: Lab3Candidate[] = [];
     const problems: string[] = [];
 
-    if (this.candidates.length + files.length > REQUIRED_TEXTS) {
-      this.errors = [
-        `Для сравнения требуется ровно ${REQUIRED_TEXTS} текста — уже выбрано ${this.candidates.length}, добавляется ${files.length}`,
-      ];
-      return;
-    }
-
-    for (const file of files) {
-      if (!file.name.toLowerCase().endsWith(".txt") && file.type !== "text/plain") {
-        problems.push(`Файл «${file.name}»: ожидается текстовый файл (.txt)`);
-        continue;
+    try {
+      if (this.candidates.length + files.length > REQUIRED_TEXTS) {
+        this.errors = [
+          `Для сравнения требуется ровно ${REQUIRED_TEXTS} текста — уже выбрано ${this.candidates.length}, добавляется ${files.length}`,
+        ];
+        return;
       }
-      try {
-        const text = await file.text();
-        const fileProblems = validateLab3Candidate(file.name, text, "английский");
-        if (fileProblems.length > 0) {
-          problems.push(...fileProblems);
+
+      for (const file of files) {
+        if (!file.name.toLowerCase().endsWith(".txt") && file.type !== "text/plain") {
+          problems.push(`Файл «${file.name}»: ожидается текстовый файл (.txt)`);
           continue;
         }
-        accepted.push({
-          name: file.name,
-          text,
-          wordCount: countEnglishWords(text),
-          origin: "file",
-        });
-      } catch (error) {
-        problems.push(
-          `Не удалось прочитать файл «${file.name}»: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        try {
+          const text = await file.text();
+          const fileProblems = validateLab3Candidate(file.name, text, "английский");
+          if (fileProblems.length > 0) {
+            problems.push(...fileProblems);
+            continue;
+          }
+          if (
+            [...this.candidates, ...accepted].some((c) => contentKey(c.text) === contentKey(text))
+          ) {
+            problems.push(`Файл «${file.name}»: текст уже добавлен (дубликат по содержимому)`);
+            continue;
+          }
+          accepted.push({
+            name: file.name,
+            text,
+            wordCount: countEnglishWords(text),
+            origin: "file",
+          });
+        } catch (error) {
+          problems.push(
+            `Не удалось прочитать файл «${file.name}»: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
       }
-    }
 
-    if (accepted.length > 0) this.candidates.push(...accepted);
-    this.errors = problems;
-    if (problems.length === 0 && accepted.length > 0) {
-      toast.success(`Добавлено текстов: ${accepted.length}`);
+      if (accepted.length > 0) {
+        this.candidates.push(...accepted);
+        this.invalidateResults();
+      }
+      this.errors = problems;
+      if (problems.length === 0 && accepted.length > 0) {
+        toast.success(`Добавлено текстов: ${accepted.length}`);
+      }
+    } finally {
+      this.isProcessing = false;
     }
   }
 
@@ -125,16 +151,17 @@ class ShinglesStore {
       ];
       return;
     }
-    if (this.candidates.some((c) => c.name === doc.name && c.text === doc.text)) {
+    if (this.candidates.some((c) => contentKey(c.text) === contentKey(doc.text))) {
       this.errors = [`Документ «${doc.name}» уже добавлен`];
       return;
     }
     const problems = validateLab3Candidate(doc.name, doc.text, "английский");
     if (problems.length > 0) {
-      // Russian demo documents fail the English-language contract of the variant.
+      // Source conflict: the assignment says "any texts from Lab 1", but the
+      // variant table requires English while Lab 1 variants 2/8/14 are Russian.
       this.errors = [
         ...problems,
-        "Демо-коллекция ЛР 1 русскоязычна; по варианту задания языку текстов ЛР 3 нужны английские файлы",
+        "В методичке для одного номера варианта ЛР 1 (2/8/14) задан русский язык, а ЛР 3 — английский: демо-коллекция ЛР 1 не может быть использована как есть. Загрузите английские файлы напрямую (импорт из файлов также требуется заданием ЛР 3).",
       ];
       return;
     }
@@ -145,11 +172,13 @@ class ShinglesStore {
       wordCount: countEnglishWords(doc.text),
       origin: "lab1",
     });
+    this.invalidateResults();
   }
 
   removeCandidate(index: number): void {
     this.candidates.splice(index, 1);
     this.errors = [];
+    this.invalidateResults();
   }
 
   /** Runs the full pipeline; requires exactly four valid candidates. */
@@ -175,6 +204,13 @@ class ShinglesStore {
       this.results = processed;
       this.comparisons = compareAllPairs(processed);
       toast.success("Сравнение выполнено");
+    } catch (error) {
+      this.invalidateResults();
+      this.errors = [
+        error instanceof EmptySketchError
+          ? error.message
+          : `Не удалось выполнить сравнение: ${error instanceof Error ? error.message : String(error)}`,
+      ];
     } finally {
       this.isProcessing = false;
     }
@@ -182,8 +218,7 @@ class ShinglesStore {
 
   reset(): void {
     this.candidates = [];
-    this.results = [];
-    this.comparisons = [];
+    this.invalidateResults();
     this.errors = [];
   }
 }

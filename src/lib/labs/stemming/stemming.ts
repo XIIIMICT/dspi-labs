@@ -2,12 +2,14 @@
  * Dictionary-based stemming (ЛР 2, варианты 2/8/14 — «Стемминг словарный»).
  *
  * Manual (Методичка, ЛР 2, «Методические указания»): a dictionary stemmer
- * «выполняет сопоставление основ слов во входном тексте и в соответствующем
- * словаре, а анализ начинается с начала слова» — the word is matched against
- * a base-form dictionary, and the analysis starts from the beginning of the
- * word (longest-prefix rule). This is deliberately NOT the naive suffix
- * stripper used by Lab 1's inverted index.
+ * matches word bases against a dictionary and «анализ начинается с начала
+ * слова». The manual does NOT define the exact key format, tie-breaking, or
+ * fallback algorithm: the exact-then-longest-prefix lookup below is this
+ * application's deterministic interpretation of that phrase, not a verbatim
+ * rule from the manual. The dictionary is hand-built and offline; unknown
+ * words are left unchanged (no claim of full linguistic coverage).
  *
+ * This is deliberately NOT the naive suffix stripper used by Lab 1's index.
  * Pure module: no Svelte imports, runs under Bun tests directly.
  */
 
@@ -32,8 +34,9 @@ const entries = new Map(Object.entries(stemDictionary.entries));
 
 /**
  * Looks a single lowercase word up in the dictionary: exact entry first, then
- * the longest dictionary key that is a proper prefix of the word (the manual's
- * "analysis starts from the beginning of the word" rule).
+ * the longest dictionary key that is a proper prefix of the word. The fallback
+ * is the implementation interpretation of the manual's «analysis starts from
+ * the beginning of the word»; the manual does not prescribe this exact rule.
  */
 export function lookupStem(word: string): StemLookup {
   const lookup = word.toLowerCase();
@@ -100,6 +103,17 @@ export function lookupHyphenated(word: string): StemLookup[] {
   );
 }
 
+/**
+ * Aggregates per-part match types into one compound status, without inventing
+ * matches: all misses → "none"; any unmatched part or any prefix fallback →
+ * "prefix" (an inexact/partial match); all parts exact → "exact".
+ */
+export function aggregateMatch(parts: StemLookup[]): StemLookup["match"] {
+  if (parts.every((p) => p.match === "none")) return "none";
+  if (parts.some((p) => p.match === "none" || p.match === "prefix")) return "prefix";
+  return "exact";
+}
+
 /** One processed word of the text: occurrence plus dictionary result. */
 export interface StemmedWord {
   start: number;
@@ -135,14 +149,14 @@ export function stemText(text: string): StemmingResult {
       // Hyphenated compounds keep a single span but per-part lookups; the
       // display stem joins the parts with the original hyphen.
       const parts = lookupHyphenated(span.word);
-      const allFound = parts.every((p) => p.stem !== null);
+      const anyFound = parts.some((p) => p.stem !== null);
       const joined = parts.map((p) => p.stem ?? p.source).join("-");
       words.push({
         start: span.start,
         end: span.end,
         source: span.word,
-        stem: allFound || parts.some((p) => p.stem !== null) ? joined : null,
-        match: allFound ? "exact" : "prefix",
+        stem: anyFound ? joined : null,
+        match: aggregateMatch(parts),
       });
     } else {
       const found = lookupStem(span.word);
@@ -165,15 +179,44 @@ export function stemText(text: string): StemmingResult {
 }
 
 /**
+ * Applies the source word's casing to a lowercase stem: ALL CAPS → upper,
+ * Initial capital → capitalized, lowercase → unchanged. Mixed/unusual casing
+ * (e.g. camelCase) falls back to lowercase.
+ */
+export function matchCasing(source: string, stem: string): string {
+  if (source === source.toLowerCase()) return stem;
+  if (source === source.toUpperCase()) return stem.toUpperCase();
+  if (
+    source.length > 1 &&
+    source[0] === source[0].toUpperCase() &&
+    source.slice(1) === source.slice(1).toLowerCase()
+  ) {
+    return stem.charAt(0).toUpperCase() + stem.slice(1);
+  }
+  return stem;
+}
+
+/**
  * Rebuilds the text with every matched word replaced by its stem, preserving
- * all original punctuation, whitespace, and casing of unmatched words.
+ * all original punctuation, whitespace, and the casing of matched words.
  */
 export function renderStemmedText(text: string, result: StemmingResult): string {
   let out = "";
   let cursor = 0;
   for (const w of result.words) {
     out += text.slice(cursor, w.start);
-    out += w.stem ?? w.source;
+    if (w.stem === null) {
+      out += w.source;
+    } else if (w.source.includes("-")) {
+      // Preserve each part's casing independently.
+      const sources = w.source.split("-");
+      out += w.stem
+        .split("-")
+        .map((part, i) => matchCasing(sources[i] ?? part, part))
+        .join("-");
+    } else {
+      out += matchCasing(w.source, w.stem);
+    }
     cursor = w.end;
   }
   out += text.slice(cursor);

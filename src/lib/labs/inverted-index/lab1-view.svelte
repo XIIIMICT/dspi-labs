@@ -1,19 +1,24 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, AlertDescription, AlertTitle } from '#lib/components/ui/alert';
-	import { Badge } from '#lib/components/ui/badge';
+	import { Alert, AlertDescription, AlertTitle } from '#lib/components/ui/alert';	import { Badge } from '#lib/components/ui/badge';
 	import { Button } from '#lib/components/ui/button';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card';
+	import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '#lib/components/ui/collapsible';
 	import { Input } from '#lib/components/ui/input';
 	import { Label } from '#lib/components/ui/label';
 	import { ScrollArea } from '#lib/components/ui/scroll-area';
 	import { Separator } from '#lib/components/ui/separator';
 	import ModalOrDrawer from '#lib/components/modal-or-drawer.svelte';
+	import { getVariantFields, getVariantInfo, labs } from '#lib/labs';
+	import { shellStore } from '#lib/shell.svelte';
 	import { appStore as app } from './store.svelte';
 	import type { Document } from './models';
-	import { findWords } from './text-processing';
+	import { findWords, removeStopWords, tokenizeAndNormalize } from './text-processing';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import InfoIcon from '@lucide/svelte/icons/info';
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
@@ -23,6 +28,9 @@
 	import UploadIcon from '@lucide/svelte/icons/upload';
 
 	const hasIndex = $derived(app.dictionary.size > 0);
+	const lab = $derived(labs.find((l) => l.folder === 'inverted-index') ?? labs[0]);
+	const variantInfo = $derived(getVariantInfo(lab, shellStore.selectedVariant));
+	const variantFields = $derived(getVariantFields(variantInfo));
 	const totalTokens = $derived.by(() => {
 		let sum = 0;
 		for (const info of app.dictionary.values()) sum += info.collectionFrequency;
@@ -79,6 +87,25 @@
 			</CardDescription>
 		</CardHeader>
 		<CardContent class="flex flex-col gap-3">
+			<div class="flex flex-wrap gap-2">
+				<Badge variant="secondary">Вариант: {shellStore.selectedVariant}</Badge>
+				{#each variantFields as [key, value] (key)}
+					<Badge variant="secondary">{key}: {String(value)}</Badge>
+				{/each}
+			</div>
+			{#if app.errors.length > 0}
+				<Alert variant="destructive">
+					<CircleAlertIcon />
+					<AlertTitle>Коллекция не соответствует заданию</AlertTitle>
+					<AlertDescription>
+						<ul class="list-disc pl-4">
+							{#each app.errors as error (error)}
+								<li>{error}</li>
+							{/each}
+						</ul>
+					</AlertDescription>
+				</Alert>
+			{/if}
 			<div class="flex flex-wrap gap-2">
 				<Button onclick={() => fileInput?.click()} disabled={app.isProcessing}>
 					{#if app.isProcessing}
@@ -255,6 +282,49 @@
 		Инвертированный индекс
 	</Button>
 
+	{#if app.diagnostics}
+		<Card>
+			<CardHeader>
+				<CardTitle>Диагностика повторов</CardTitle>
+				<CardDescription>
+					Инспектируемые признаки задания «схожие по тематике»: слова, повторяющиеся внутри
+					документа и общие для нескольких документов. Это данные для оценки, а не
+					автоматическое доказательство смысловой близости текстов.
+				</CardDescription>
+			</CardHeader>
+			<CardContent class="flex flex-col gap-3">
+				<div class="flex flex-wrap gap-2">
+					<Badge variant="secondary">
+						Терминов, общих для нескольких документов: {app.diagnostics.sharedAcrossDocuments.length}
+					</Badge>
+				</div>
+				<p class="text-muted-foreground text-sm">
+					Примеры общих терминов: {app.diagnostics.sharedAcrossDocuments.slice(0, 10).join(', ')}
+				</p>
+				<Collapsible>
+					<CollapsibleTrigger class="group flex w-full items-center gap-2 text-left text-sm font-medium">
+						<ChevronRightIcon
+							class="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=open]:hidden"
+						/>
+						<ChevronDownIcon
+							class="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=closed]:hidden"
+						/>
+						Повторы внутри документов ({app.diagnostics.repeatedWithinDocuments.length} документов)
+					</CollapsibleTrigger>
+					<CollapsibleContent>
+						<div class="mt-2 max-h-48 overflow-auto rounded-md border p-2 font-mono text-xs">
+							{#each app.diagnostics.repeatedWithinDocuments.slice(0, 10) as item (item.name)}
+								<div class="truncate">
+									{item.name}: {item.terms.slice(0, 15).join(', ')}
+								</div>
+							{/each}
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
+			</CardContent>
+		</Card>
+	{/if}
+
 	<Card>
 		<CardHeader>
 			<CardTitle>Логи</CardTitle>
@@ -286,7 +356,71 @@
 			{/if}
 		{/snippet}
 		{#if shownDoc}
-			<p class="leading-relaxed whitespace-pre-wrap">{shownDoc.rawText}</p>
+			<div class="flex flex-col gap-2">
+				<Collapsible>
+					<CollapsibleTrigger class="group flex w-full items-center gap-2 text-left text-sm font-medium">
+						<ChevronRightIcon
+							class="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=open]:hidden"
+						/>
+						<ChevronDownIcon
+							class="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=closed]:hidden"
+						/>
+						Этап 1–2: исходный текст и исходные лексемы
+					</CollapsibleTrigger>
+					<CollapsibleContent>
+						<div class="mt-2 flex flex-col gap-2 text-sm">
+							<pre class="bg-muted/30 max-h-48 overflow-auto rounded-md border p-2 whitespace-pre-wrap">{shownDoc.rawText}</pre>
+							<p class="text-muted-foreground font-mono text-xs">
+								{findWords(shownDoc.rawText)
+									.slice(0, 200)
+									.map((w) => w.word)
+									.join(' ')}
+							</p>
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
+				<Collapsible>
+					<CollapsibleTrigger class="group flex w-full items-center gap-2 text-left text-sm font-medium">
+						<ChevronRightIcon
+							class="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=open]:hidden"
+						/>
+						<ChevronDownIcon
+							class="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=closed]:hidden"
+						/>
+						Этап 3: нормализованные лексемы (после стоп-слов)
+					</CollapsibleTrigger>
+					<CollapsibleContent>
+						<p class="bg-muted/30 mt-2 max-h-48 overflow-auto rounded-md border p-2 font-mono text-xs whitespace-pre-wrap">
+							{removeStopWords(tokenizeAndNormalize(shownDoc.rawText))
+								.slice(0, 400)
+								.join(' ')}
+						</p>
+					</CollapsibleContent>
+				</Collapsible>
+				<Collapsible>
+					<CollapsibleTrigger class="group flex w-full items-center gap-2 text-left text-sm font-medium">
+						<ChevronRightIcon
+							class="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=open]:hidden"
+						/>
+						<ChevronDownIcon
+							class="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=closed]:hidden"
+						/>
+						Этап 4: постинги и позиции в документе
+					</CollapsibleTrigger>
+					<CollapsibleContent>
+						<div class="mt-2 max-h-48 overflow-auto rounded-md border p-2 font-mono text-xs">
+							{#each [...app.dictionary.entries()]
+								.filter(([, info]) => info.postings.some((p) => p.docId === shownDoc.id))
+								.slice(0, 30) as [term, info] (term)}
+								<div>
+									{term}: частота {info.postings.find((p) => p.docId === shownDoc.id)?.termFrequency},
+									позиции [{info.postings.find((p) => p.docId === shownDoc.id)?.positions.join(', ')}]
+								</div>
+							{/each}
+						</div>
+					</CollapsibleContent>
+				</Collapsible>
+			</div>
 		{/if}
 	</ModalOrDrawer>
 </div>

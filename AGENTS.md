@@ -4,7 +4,7 @@ Repository instructions for coding agents. Follow the relevant sections only, bu
 
 ## 1. Project mission
 
-A browser-only educational application for laboratory work in the course **Distributed Information Processing Systems**. Labs are declared in `src/lib/labs/registry.json`; lab 1 is implemented, the others show a placeholder until their modules exist.
+A browser-only educational application for laboratory work in the course **Distributed Information Processing Systems**. Labs are declared in the ordered `src/lib/labs/registry.json`; all four labs are implemented. `src/lib/labs/lab-views.ts` is the explicit folder→view rendering contract: a folder renders only when registered there, otherwise the main page shows the placeholder. `src/lib/labs/implemented.ts` (store-module discovery) remains a separate data-level signal.
 
 The application is a static site. File reading, text processing, indexing, and search run in the browser; there is no application backend. Do not introduce a server, database, authentication, telemetry, or external processing service unless the user explicitly asks for it and the academic requirements justify it.
 
@@ -75,7 +75,7 @@ Do not upgrade the framework, toolchain, UI preset, or major dependencies as par
 - Each lab has a semantic directory under `src/lib/labs/` (e.g. `inverted-index/`), holding its implementation: domain models, processing/building logic, and a lab-specific store where needed.
 - All lab metadata lives in the single `src/lib/labs/registry.json`: an ordered array of `{ title, folder, task, variants }`. A lab's ordinal number is its 1-based array position; do not store numbers in the config. `task` is plain text (whitespace preserved), not Markdown. `src/lib/labs/index.ts` is the only reader and derives numbers.
 - `variants` is an array of dictionaries with `variants: number[]` plus lab-specific fields (e.g. `вид`, `язык`, `алгоритм хэширования`). Variant numbers must be positive integers and must not overlap within the same lab. Lab-specific fields are validated per lab in `tests/labs/`; do not hardcode one schema for all labs.
-- `src/lib/labs/index.ts` is the only reader of `registry.json`; it derives 1-based numbers and detects implemented labs via `src/lib/labs/implemented.ts` (a folder counts as implemented when it contains `store.svelte.ts`). Do not hardcode the list of implemented labs in UI components.
+- `src/lib/labs/index.ts` is the only reader of `registry.json`; it derives 1-based numbers and reads the data-level `implemented` flag from `src/lib/labs/implemented.ts` (store-module discovery). Rendering is a separate contract: `src/lib/labs/lab-views.ts` maps folder → view component, and `src/routes/+page.svelte` dispatches through it. A folder with a registered view renders; any folder without one shows the placeholder. Do not hardcode the list of implemented labs in UI components.
 - The header renders one tab per registry entry, all selectable. `src/lib/shell.svelte.ts` holds the selected tab value shared by the header and `src/routes/+page.svelte`; unimplemented labs render a centered placeholder on the main page. `ModalOrDrawer` is a shared shell component in `src/lib/components/`, not tied to any lab — it may be used by any screen.
 - Keep student-facing task text and variant data faithful to the supplied academic source. Do not translate, normalize, or paraphrase academic wording unless requested.
 - Add tests for new lab-specific processing and validation. The shared `tests/registry.test.mts` validates `registry.json` structure; a new lab adds its field schema to `tests/labs/`.
@@ -84,13 +84,13 @@ Do not upgrade the framework, toolchain, UI preset, or major dependencies as par
 
 The current lab implements an inverted index and dictionary for a collection of text documents. Its documented contract includes:
 
-- importing `.txt` files and supporting a demo collection;
+- importing `.txt` files and supporting a demo collection, with collection-level validation (exactly 100 documents, ≥1000 linguistic words each, type/readability/duplicate checks) that never destroys a valid collection on failure;
 - text normalization/tokenization, stop-word removal, and the existing algorithmic Russian stemmer;
-- building an inverted index with term frequency, document frequency, collection frequency, and posting positions;
+- building an inverted index with term frequency, document frequency, collection frequency, and posting positions. The registered hybrid scheme is explicit: each term stores positions in a linked chain of fixed-capacity blocks (`inverted-index/hybrid-storage.ts`), flattened to the historical `TermInfo` shape so ported behavior and consumers stay compatible;
 - searching for source word forms and navigating/highlighting matches inside a document;
-- showing index terms by collection frequency, with expandable postings and incremental display.
+- showing index terms in alphabetical order (the manual's required representation) with expandable postings and frequency badges, plus inspectable per-document processing stages and repeat diagnostics.
 
-The web implementation is a port of an existing Kotlin/Jetpack Compose implementation. Treat the ported algorithm, its ordering of text-processing stages, and its data structures as compatibility-sensitive. Do not replace the stemmer with a library, alter the stop-word list, or change tokenization semantics as a cleanup. Change academic behavior only when the lab specification or user explicitly requires it, and add regression tests for the changed behavior.
+The web implementation is a port of an existing Kotlin/Jetpack Compose implementation. Treat the ported algorithm, its ordering of text-processing stages, and its data structures as compatibility-sensitive. Do not replace the stemmer with a library, alter the stop-word list, or change tokenization semantics as a cleanup. Change academic behavior only when the lab specification or user explicitly requires it, and add regression tests for the changed behavior. Where the manual leaves a rule unspecified (e.g. the exact 84 hash functions in Lab 3, the query/sample-size protocol in Lab 4), record the implementation choice in `docs/requirements-matrix.md` instead of attributing it to the manual.
 
 The lab 1 `task` in `registry.json` requires 100 thematically related documents with at least 1,000 words each. When changing demo data or validation, verify the requirements against that `task` and the methodical guide rather than relying only on this summary.
 

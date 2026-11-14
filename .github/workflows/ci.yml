@@ -78,7 +78,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/dependency-review-action@v5
         with:
           # Block a PR that introduces a known-vulnerable package.
           fail-on-severity: moderate

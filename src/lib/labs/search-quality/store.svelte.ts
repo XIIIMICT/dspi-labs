@@ -8,12 +8,15 @@ import { countEnglishWords } from "../shingles/shingles";
 import {
   buildConclusions,
   runExperiment,
+  SAMPLE_SIZES,
   type EvaluationDocument,
   type ExperimentResult,
 } from "./experiment";
 
 /** Minimum words per text (inherited from the Lab 3 assignment contract). */
 export const MIN_WORDS_PER_TEXT = 1000;
+/** The largest required sample size; the query is a separate input. */
+export const REQUIRED_CANDIDATES = SAMPLE_SIZES[SAMPLE_SIZES.length - 1];
 
 /** Validation rules for one evaluation document (pure, no Svelte). */
 export function validateEvaluationText(name: string, text: string): string[] {
@@ -36,8 +39,16 @@ class SearchQualityStore {
   /** Retrieval threshold in similarity percent. */
   thresholdPercent = $state(20);
   errors = $state<string[]>([]);
+  /** Monotonic counter for stable IDs (filenames may repeat). */
+  private nextId = 1;
 
-  /** Adds a `.txt` file as a document with the given ground-truth label. */
+  /** Clears any result computed from a previous input state. */
+  private invalidateResults(): void {
+    this.result = null;
+    this.conclusions = [];
+  }
+
+  /** Adds a `.txt` file as a document with the given relevance label. */
   async addFile(file: File, relevant: boolean): Promise<void> {
     if (this.isProcessing) return;
     this.errors = [];
@@ -53,7 +64,8 @@ class SearchQualityStore {
         this.errors = problems;
         return;
       }
-      this.documents.push({ name: file.name, text, relevant });
+      this.documents.push({ id: `doc-${this.nextId++}`, name: file.name, text, relevant });
+      this.invalidateResults();
       toast.success(
         relevant
           ? `Релевантный документ добавлен: ${file.name}`
@@ -71,12 +83,16 @@ class SearchQualityStore {
   removeDocument(index: number): void {
     this.documents.splice(index, 1);
     this.errors = [];
+    this.invalidateResults();
   }
 
-  /** Flips the relevance label of a document (ground truth is user-visible). */
+  /** Flips the explicit relevance label of a document. */
   toggleRelevant(index: number): void {
     const doc = this.documents[index];
-    if (doc) this.documents[index] = { ...doc, relevant: !doc.relevant };
+    if (doc) {
+      this.documents[index] = { ...doc, relevant: !doc.relevant };
+      this.invalidateResults();
+    }
   }
 
   /** Swaps a document into the query position ([0]). */
@@ -84,20 +100,29 @@ class SearchQualityStore {
     if (index <= 0 || index >= this.documents.length) return;
     const [doc] = this.documents.splice(index, 1);
     this.documents.unshift(doc);
+    this.invalidateResults();
+  }
+
+  /** Updates the retrieval threshold and drops stale results. */
+  setThreshold(value: number): void {
+    if (!Number.isFinite(value)) return;
+    this.thresholdPercent = Math.min(100, Math.max(0, value));
+    this.invalidateResults();
   }
 
   /**
    * Runs the experiment at sizes 2, 4, 6, 8, 10. Requires the query plus at
-   * least 9 candidates so the largest sample is fully covered; fewer is an
+   * least 10 candidates so the largest sample is fully covered; fewer is an
    * error, not a partial result.
    */
   async run(width: number): Promise<void> {
     if (this.isProcessing) return;
     this.errors = [];
-    if (this.documents.length < 10) {
+    if (this.documents.length < REQUIRED_CANDIDATES + 1) {
       this.errors.push(
-        `Для выборок 2, 4, 6, 8 и 10 документов требуется запрос и не менее 9 кандидатов — добавлено ${this.documents.length}`,
+        `Для выборок ${SAMPLE_SIZES.join(", ")} документов требуется отдельный запрос и не менее ${REQUIRED_CANDIDATES} кандидатов — добавлено ${this.documents.length} документов (запрос + ${Math.max(0, this.documents.length - 1)} кандидатов)`,
       );
+      this.invalidateResults();
       return;
     }
     this.isProcessing = true;
@@ -110,6 +135,11 @@ class SearchQualityStore {
       this.result = result;
       this.conclusions = buildConclusions(result.samples);
       toast.success("Оценка качества поиска выполнена");
+    } catch (error) {
+      this.invalidateResults();
+      this.errors.push(
+        `Не удалось выполнить оценку: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       this.isProcessing = false;
     }
@@ -117,8 +147,9 @@ class SearchQualityStore {
 
   reset(): void {
     this.documents = [];
-    this.result = null;
-    this.conclusions = [];
+    this.nextId = 1;
+    this.thresholdPercent = 20;
+    this.invalidateResults();
     this.errors = [];
   }
 }

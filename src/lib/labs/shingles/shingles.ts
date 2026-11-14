@@ -3,8 +3,14 @@
  * English texts).
  *
  * Manual (Методичка, ЛР 3, «Методические указания») pipeline, in order:
- *   1) канонизация — lowercase, strip punctuation/tags, remove auxiliary
- *      words (prepositions/conjunctions — stop words);
+ *   1) канонизация — lowercase, strip punctuation/tags/digits, remove
+ *      auxiliary words (prepositions/conjunctions — stop words), and bring
+ *      nouns to a nominative singular form. The manual describes this stage
+ *      in Russian morphological terms; for English the implemented, honestly
+ *      scoped equivalent is a deterministic offline singularization of common
+ *      plural nouns (regular endings + a small irregular map). This is NOT
+ *      full POS-aware lemmatization, and root reduction remains an optional,
+ *      deliberately unused step (the manual says «иногда»).
  *   2) разбиение на шинглы — overlapping sequences of W consecutive canonical
  *      tokens («внахлест»), count = tokens − W + 1;
  *   3) вычисление хэшей — for each of the 84 static hash functions compute a
@@ -14,10 +20,11 @@
  *   5) сравнение — count how many of the 84 selected sums coincide between two
  *      texts; similarity % = matches / 84 × 100.
  *
- * The 84 "static hash functions" are realized as SHA-1 (the registered
- * algorithm) over 84 distinct salt prefixes, giving 84 independent value
- * distributions while using one well-defined fingerprint. Everything is
- * computed locally; no network or external hash service.
+ * The manual requires 84 static hash functions but does NOT define their
+ * byte-level construction. The 84 functions here are an implementation choice:
+ * SHA-1 (the registered algorithm) over `${salt}:${shingleText}` with
+ * salt 0..83, folded to a 48-bit integer from the first 6 digest bytes in
+ * big-endian order. Everything is computed locally; no network service.
  *
  * Pure module: no Svelte imports. SHA-1 is a small pure-TS implementation so
  * tests and workers share the exact same code path as the browser.
@@ -113,13 +120,76 @@ const STOP_WORDS = new Set([
   "its",
 ]);
 
-/** Canonical tokens: lowercase letter sequences without stop words. */
+/**
+ * Deterministic, offline English singularization. Scope is intentionally
+ * narrow: common regular plural endings and a small irregular map. Words that
+ * are not clearly plural are returned unchanged; this is not a claim of full
+ * morphological coverage (see module doc).
+ */
+const IRREGULAR_PLURALS: Record<string, string> = {
+  children: "child",
+  men: "man",
+  women: "woman",
+  people: "person",
+  feet: "foot",
+  teeth: "tooth",
+  geese: "goose",
+  mice: "mouse",
+  oxen: "ox",
+  data: "datum",
+  indices: "index",
+  matrices: "matrix",
+  analyses: "analysis",
+  bases: "basis",
+  crises: "crisis",
+  phenomena: "phenomenon",
+};
+
+/** Singularizes one lowercase English token when it is clearly a plural. */
+export function singularize(token: string): string {
+  const irregular = IRREGULAR_PLURALS[token];
+  if (irregular !== undefined) return irregular;
+  // -ies → -y (companies → company), but never a bare "ies".
+  if (token.length > 4 && token.endsWith("ies")) return `${token.slice(0, -3)}y`;
+  // -sses/-shes/-ches/-xes/-zes → drop "es" (classes → class, boxes → box).
+  if (token.length > 4 && /(?:ss|sh|ch|x|z)es$/.test(token)) {
+    return token.slice(0, -2);
+  }
+  // General -s plural: keep singular words ending in -ss/-us/-is.
+  if (
+    token.length > 3 &&
+    token.endsWith("s") &&
+    !token.endsWith("ss") &&
+    !token.endsWith("us") &&
+    !token.endsWith("is")
+  ) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
+/**
+ * Canonical tokens: lowercase English letter sequences, stop words removed,
+ * common plural nouns brought to a singular base form. HTML-like tags and
+ * digits act as separators; the original source text is never mutated.
+ */
 export function canonicalize(text: string): string[] {
   const tokens: string[] = [];
-  for (const match of text.toLowerCase().matchAll(/[a-z]+/g)) {
-    if (!STOP_WORDS.has(match[0])) tokens.push(match[0]);
+  // Tags are stripped before letter extraction so tag names are not tokens.
+  const withoutTags = text.replace(/<[^>]*>/g, " ");
+  for (const match of withoutTags.toLowerCase().matchAll(/[a-z]+/g)) {
+    if (STOP_WORDS.has(match[0])) continue;
+    tokens.push(singularize(match[0]));
   }
   return tokens;
+}
+
+/**
+ * Normalized-content identity: lowercase, whitespace collapsed. Duplicate
+ * rejection uses the text itself, never just the filename.
+ */
+export function contentKey(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 /** Counts English words (letter sequences) — the ≥1000-word contract check. */
@@ -254,9 +324,9 @@ export function sha1Bytes(input: string): Uint8Array {
 
 /**
  * Hash function #i of a shingle: SHA-1 of the decimal salt prefix + shingle
- * text, folded to a 48-bit integer (first 6 digest bytes, big-endian). The
- * fold keeps comparisons numeric; the salts give each row its own value
- * distribution, as the manual's table of 84 functions requires.
+ * text, folded to a 48-bit integer (first 6 digest bytes, big-endian). This
+ * salt-prefix construction is an implementation choice — the manual only
+ * requires 84 static hash functions, not their byte-level definition.
  */
 export function hashShingle(salt: number, text: string): number {
   const bytes = sha1Bytes(`${salt}:${text}`);
@@ -270,9 +340,17 @@ export function hashShingle(salt: number, text: string): number {
   );
 }
 
+/** Raised when a text cannot produce a comparable sketch. */
+export class EmptySketchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmptySketchError";
+  }
+}
+
 /** Per-text result of stages 1–4: canonical form, shingles, 84 control sums. */
 export interface ShingleSketch {
-  /** Canonical tokens after stop-word removal. */
+  /** Canonical tokens after stop-word removal and singularization. */
   tokens: string[];
   /** Overlapping shingles in order. */
   shingles: Shingle[];
@@ -280,6 +358,8 @@ export interface ShingleSketch {
   controlSums: number[];
   /** controlSums[i] source shingle index (for evidence display). */
   controlSumSources: number[];
+  /** A sketch is comparable only when at least one shingle exists. */
+  valid: boolean;
 }
 
 /** Full lab configuration derived from the selected variant. */
@@ -288,13 +368,21 @@ export interface ShinglesConfig {
   width: number;
 }
 
-/** Builds the sketch: canonicalize → shingle → hash → per-row minimum. */
+/**
+ * Builds the sketch: canonicalize → shingle → hash → per-row minimum.
+ * A text with no shingles yields an explicitly invalid sketch: no sentinel
+ * control sums are fabricated, so two empty texts can never look identical.
+ */
 export function buildSketch(text: string, config: ShinglesConfig): ShingleSketch {
   const tokens = canonicalize(text);
   const shingles = buildShingles(tokens, config.width);
-
   const controlSums: number[] = [];
   const controlSumSources: number[] = [];
+
+  if (shingles.length === 0) {
+    return { tokens, shingles, controlSums, controlSumSources, valid: false };
+  }
+
   for (let fn = 0; fn < HASH_FUNCTION_COUNT; fn++) {
     let min = Number.POSITIVE_INFINITY;
     let minSource = -1;
@@ -305,10 +393,10 @@ export function buildSketch(text: string, config: ShinglesConfig): ShingleSketch
         minSource = shingle.index;
       }
     }
-    controlSums.push(min === Number.POSITIVE_INFINITY ? 0 : min);
+    controlSums.push(min);
     controlSumSources.push(minSource);
   }
-  return { tokens, shingles, controlSums, controlSumSources };
+  return { tokens, shingles, controlSums, controlSumSources, valid: true };
 }
 
 /** Pairwise comparison outcome (stage 5). */
@@ -327,8 +415,13 @@ export interface ShingleComparison {
   similarityPercent: number;
 }
 
-/** Compares two sketches: counts equal control sums over the 84 functions. */
+/** Compares two valid sketches: counts equal control sums over 84 functions. */
 export function compareSketches(a: ShingleSketch, b: ShingleSketch): ShingleComparison {
+  if (!a.valid || !b.valid) {
+    throw new EmptySketchError(
+      "Сравнение невозможно: текст не образует ни одного шингла после канонизации",
+    );
+  }
   const matchingFunctions: number[] = [];
   for (let fn = 0; fn < HASH_FUNCTION_COUNT; fn++) {
     if (a.controlSums[fn] === b.controlSums[fn]) matchingFunctions.push(fn);
@@ -354,7 +447,7 @@ export interface ShingleText {
 
 /**
  * Compares all unordered pairs of texts (4 texts → 6 pairs) and returns the
- * comparisons in lexicographic (a, b) order.
+ * comparisons in lexicographic (a, b) order. Invalid sketches fail loudly.
  */
 export function compareAllPairs(texts: ShingleText[]): ShingleComparison[] {
   const result: ShingleComparison[] = [];

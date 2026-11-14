@@ -56,13 +56,34 @@ All lab stores keep disjoint state: a run in one lab cannot alter another
 lab's inputs or results. Nothing is persisted (no localStorage/IndexedDB);
 the corpus lives in session memory only.
 
-## Lab 1 — inverted index (unchanged)
+## Lab 1 — inverted index and dictionary
 
 Port of the original Kotlin implementation: tokenize → stop-word removal →
-suffix stemmer → `Map<stem, TermInfo>` with postings (hybrid scheme). The
-screens moved from the root page into `inverted-index/lab1-view.svelte` without
-behavioral changes; `/invertedIndex` and `/search/[docId]/[query]` routes are
-untouched. Regression coverage in `tests/labs/lab1-regression.test.mts`.
+suffix stemmer → `Map<stem, TermInfo>` (hybrid scheme). The ported tokenization,
+stop-word list, stemmer, and log output are compatibility-sensitive and are
+covered by snapshots in `tests/smoke-test.mts` / `tests/labs/lab1-regression.test.mts`.
+The screens moved from the root page into `inverted-index/lab1-view.svelte`;
+`/invertedIndex` and `/search/[docId]/[query]` routes are untouched.
+
+Explicit additions for the registered variant («Гибридная схема», 2/8/14):
+
+- `hybrid-storage.ts` — the manual's «связанный список массивов фиксированной
+  длины для каждого термина»: each term owns ONE linked chain of fixed-capacity
+  (`BLOCK_CAPACITY = 4`) position blocks; per-document posting metadata keeps
+  references to its blocks. `flattenTermInfo()` is the deterministic adapter
+  back to the historical flat `TermInfo`, so no consumer changes.
+- `collection-validation.ts` — pure validation before any state replacement:
+  exactly 100 documents, ≥1000 linguistic (`\p{L}+`) word tokens each, file
+  type / readability / content-duplicate checks. On failure the existing
+  collection and index stay intact; Russian errors are shown. Stable IDs are
+  assigned only to accepted documents. `collectionDiagnostics()` exposes
+  inspectable repetition evidence — it does NOT claim to prove semantic
+  thematic similarity.
+- `/invertedIndex` sorts terms alphabetically (the manual's representation);
+  frequency remains a secondary badge. The Lab 1 view shows the variant,
+  per-document processing stages (source lexemes, normalized terms, postings),
+  and repeat diagnostics.
+- Validation + hybrid-structure tests: `tests/labs/lab1-validation.test.mts`.
 
 ## Lab 2 — dictionary-based stemming
 
@@ -71,57 +92,83 @@ stemmer matches word bases against a stem dictionary «starting from the
 beginning of the word»:
 
 - `dictionary.ts` — local offline stem dictionary (word form → base form),
-  hand-built for the lab's scope; no runtime downloads.
+  hand-built for the lab's scope; no runtime downloads and no claim of full
+  linguistic coverage. Unknown words pass through unchanged.
 - `stemming.ts` — pure algorithm: token spans (`\p{L}+(?:-\p{L}+)*` over the
   source, preserving offsets), lowercase lookup, exact entry first, then the
-  longest dictionary key that is a proper prefix (≥ 3 chars). Hyphenated
-  tokens look up each part independently. Missing words pass through
-  unchanged; `renderStemmedText` rebuilds the text with stems substituted,
-  preserving all punctuation/whitespace.
+  longest dictionary key that is a proper prefix (≥ 3 chars). The exact-key /
+  longest-prefix rule is THIS APPLICATION'S deterministic interpretation of the
+  manual's «анализ начинается с начала слова»; the manual does not define the
+  key format or fallback. Hyphenated tokens look up each part independently
+  and aggregate the real part-level match types. Missing words pass through
+  unchanged; `renderStemmedText` preserves punctuation/whitespace AND the
+  source casing of matched words (lower / Initial capital / ALL CAPS).
 - The naive suffix stemmer of Lab 1 is deliberately **not** reused here.
 
 ## Lab 3 — shingle text comparison
 
 Variant 2/8/14: SHA-1, 8-word shingles, English texts. The manual's pipeline:
 
-1. **Canonicalization** — lowercase, English letters only, stop words
-   (prepositions/conjunctions — the manual's «вспомогательные единицы») removed.
+1. **Canonicalization** — lowercase, English letters only, HTML-like tags and
+   digits as separators, stop words (the manual's «вспомогательные единицы»)
+   removed, plus conservative offline singularization of common plural nouns.
+   The manual's requirement is stated in Russian morphological terms
+   («приведение имен существительных в именительный падеж, единственное
+   число»); for English this is a documented approximation, NOT full
+   POS-aware lemmatization. Root reduction («иногда») is deliberately not
+   applied. The source text is never mutated.
 2. **Shingling** — overlapping (`внахлест`) sequences of W canonical tokens;
    count = tokens − W + 1.
 3. **Hashing** — 84 static hash functions: SHA-1 of `${salt}:${shingleText}`
-   with salt `0..83`, folded to a 48-bit integer. SHA-1 is a pure-TS FIPS
-   180-4 implementation (`sha1Hex`/`sha1Bytes`/`sha1Words`) shared by tests
-   and UI; no external hash service.
+   with salt `0..83`, folded to a 48-bit integer (first 6 digest bytes,
+   big-endian). SHA-1 is a pure-TS FIPS 180-4 implementation shared by tests
+   and UI. The salt-prefix construction is an IMPLEMENTATION CHOICE: the manual
+   requires 84 functions but does not define their byte-level construction.
+   Known-answer vectors live in `tests/labs/shingles.test.mts`.
 4. **Selection** — per-function minimum control sum (the manual's fixed
    sampling rule) → an 84-element sketch per text.
 5. **Comparison** — matching control sums across the 84 functions;
    similarity % = matches / 84 × 100. Four texts → six unordered pairs.
+   A text with zero shingles produces an explicitly INVALID sketch
+   (`valid: false`, no sentinel sums); `compareSketches` throws
+   `EmptySketchError` instead of manufacturing 100% similarity.
 
 Input contract (enforced in code, not just the `accept` attribute): exactly
-four texts, each ≥ 1000 English words; duplicates rejected; Lab 1 corpus
-documents offered for selection with the same validation (the Russian demo
-collection fails the English-language rule with an explicit message).
-Intermediate evidence (tokens, shingles, the 84 control sums, matching
-function indices) is available in collapsible sections.
+four texts, each ≥ 1000 English words; duplicates rejected by normalized
+content, not filename; Lab 1 corpus documents offered with the same
+validation. Single-flight `isProcessing` covers async reads; every candidate
+mutation invalidates results/comparisons. The Lab 1 ↔ Lab 3 language conflict
+is a SOURCE CONFLICT (Lab 1 variants 2/8/14 = Russian, Lab 3 = English); the
+UI explains it and direct English file import (also required by the Lab 3
+assignment) is the practical path.
 
 ## Lab 4 — search quality evaluation
 
-Variant 2/8/14 inherits SHA-1 / 8-word shingles / English from Lab 3 (same
-table row of the manual). Retrieval scenario (the narrowest reading of
-«согласно реализации своего алгоритма в лабораторной работе №3»): a designated
-query text is compared to every candidate with the Lab 3 sketch; a document is
-retrieved when similarity ≥ threshold. Ground truth is explicit,
-user-controlled, and separate from the algorithm: documents are added as
-relevant/irrelevant and can be relabeled in the UI.
+Variant 2/8/14 inherits SHA-1 / 8-word shingles / English from Lab 3 — these
+are INHERITED LAB 3 ALGORITHM SETTINGS, not an independent Lab 4 variant table
+(the manual has none). Retrieval protocol (an application interpretation, NOT
+literal manual instructions): a designated query text is compared to every
+candidate with the Lab 3 sketch; a document is retrieved when similarity ≥
+threshold. The query is a separate input and is never a returned document.
+Relevance is explicit, user-supplied «эталонная разметка релевантности» — a
+human judgment, not objective truth; the manual distinguishes objective
+relevance from subjective pertinence.
 
 - `metrics.ts` — manual formulas from confusion counts:
   P = a/(a+b), R = a/(a+c), Fallout = b/(b+d), F1 = 2PR/(P+R);
-  zero denominators yield 0 (F1 = 0 when P+R = 0).
-- `experiment.ts` — for each N ∈ {2, 4, 6, 8, 10}: subset = query + first N−1
-  candidates (deterministic), retrieval decisions from the threshold,
-  confusion counts from labels × decisions, metrics from counts. Chart data
-  is the computed F1 series. Conclusions are generated from the measured
-  values (no monotonicity assumption).
+  zero denominators yield 0 (F1 = 0 when P+R = 0). The zero-denominator
+  convention is an APPLICATION convention; the manual does not specify it.
+  `d` = missed NON-relevant per the manual's confusion table and the Fallout
+  formula; the manual's prose line for `d` repeats `c` and is inconsistent.
+- `experiment.ts` — for each N ∈ {2, 4, 6, 8, 10}: exactly N candidates
+  (query separate), so `a+b+c+d = N`; retrieval decisions from the threshold,
+  confusion counts from labels × decisions. Sketches are cached by stable
+  document ID (filenames may repeat). Chart data is the computed F1 series.
+  Conclusions report only observed values and differences — no unsupported
+  causal claims.
+- `store.svelte.ts` — stable IDs for every document; any input mutation
+  (add/remove, relevance toggle, query swap, threshold change) clears stale
+  results and conclusions.
 - The chart is a small custom SVG (no chart dependency): axis titles, grid,
   per-point labels; the exact values are in the adjacent table with a, b, c, d.
 
@@ -134,14 +181,21 @@ relevant/irrelevant and can be relabeled in the UI.
 - `lab1-regression.test.mts` — Lab 1 behavior snapshots, demo collection
   contract (100 × ≥1000 words, deterministic), corpus accessor detachment,
   and view dispatch registration.
+- `lab1-validation.test.mts` — 100-document contract, 999/1000-word boundary,
+  unreadable/duplicate/unsupported sources, stable IDs, hybrid linked-block
+  structure (capacity, rollover, traversal, multi-document frequencies),
+  alphabetical ordering, repeat diagnostics.
 - `stemming.test.mts` — dictionary lookups (exact/prefix/miss), 100-word
-  boundary, punctuation/structure preservation, hyphens, empty input.
-- `shingles.test.mts` — canonicalization, shingle count formula, SHA-1 test
-  vectors, 84-function construction, identical/disjoint/partial pairs,
-  4-text → 6-pair structure, 1000-word boundary.
+  boundary, punctuation/structure/casing preservation, hyphenated match
+  aggregation, empty input, dictionary-shape invariants.
+- `shingles.test.mts` — canonicalization + singularization, shingle count
+  formula, SHA-1 and salted known-answer vectors, 84-function construction,
+  empty-sketch rejection, identical/disjoint/partial pairs, 4-text → 6-pair
+  structure, content-based duplicate identity, 1000-word boundary.
 - `search-quality.test.mts` — hand-computed metrics, zero-denominator rules,
-  exact sample sizes, stable subsets, chart-data parity, threshold
-  sensitivity, conclusions generation.
+  exact sample sizes with `a+b+c+d = N`, ID-based caching and duplicate
+  filenames, threshold sensitivity, chart-data parity, evidence-based
+  conclusions.
 
 Run with `bun run test`.
 

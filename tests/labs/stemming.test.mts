@@ -1,16 +1,20 @@
 /**
- * Lab 2 (dictionary-based stemming) tests: the manual's method — exact
- * dictionary match, then longest-prefix fallback ("анализ начинается с начала
- * слова"), missing words left unchanged, structure-preserving output.
+ * Lab 2 (dictionary-based stemming) tests: exact dictionary match, then the
+ * longest-prefix fallback (this app's interpretation of «анализ начинается с
+ * начала слова»), missing words left unchanged, structure/casing-preserving
+ * output, honest hyphenated match aggregation.
  * Boundaries: 100-word minimum, case/punctuation, hyphens, empty input.
  */
 
 import assert from "node:assert/strict";
 import { stemDictionary } from "../../src/lib/labs/stemming/dictionary.ts";
 import {
+  aggregateMatch,
   countWords,
   findTokenSpans,
+  lookupHyphenated,
   lookupStem,
+  matchCasing,
   renderStemmedText,
   stemText,
 } from "../../src/lib/labs/stemming/stemming.ts";
@@ -52,7 +56,7 @@ assert.equal(atBoundary.matched, 100, "all sample words are in the dictionary");
 const belowBoundary = makeWords(99);
 assert.equal(countWords(belowBoundary), 99);
 
-// --- Full-text formatting and punctuation ---
+// --- Full-text formatting, punctuation, and CASE PRESERVATION ---
 const sample = "Документы, индексы и системы!\nПоиск документа; документ-база.";
 const result = stemText(sample);
 // 7 tokens: «документ-база» is a single hyphenated token.
@@ -60,11 +64,23 @@ assert.equal(result.totalWords, 7);
 // «и» is not in the dictionary (stop words stay unmatched); the rest hit.
 assert.equal(result.matched, 6);
 assert.equal(result.missed, 1);
-// Rebuilt text preserves punctuation, whitespace, line breaks, and unmatched words.
+// Rebuilt text preserves punctuation, whitespace, line breaks, unmatched
+// words byte-for-byte, and matched words keep their original casing.
 const rendered = renderStemmedText(sample, result);
-assert.equal(rendered, "документ, индекс и систем!\nпоиск документ; документ-баз.");
+assert.equal(rendered, "Документ, индекс и систем!\nПоиск документ; документ-баз.");
 // The source text itself is never mutated.
 assert.equal(sample, "Документы, индексы и системы!\nПоиск документа; документ-база.");
+
+// --- Casing helper: lowercase / Initial capital / ALL CAPS ---
+assert.equal(matchCasing("документы", "документ"), "документ");
+assert.equal(matchCasing("Документы", "документ"), "Документ");
+assert.equal(matchCasing("ДОКУМЕНТЫ", "документ"), "ДОКУМЕНТ");
+assert.equal(matchCasing("дОкУмЕнТы", "документ"), "документ"); // mixed → lowercase
+const cased = stemText("Документы ДОКУМЕНТЫ документы КСИЛОФОН");
+assert.equal(
+  renderStemmedText("Документы ДОКУМЕНТЫ документы КСИЛОФОН", cased),
+  "Документ ДОКУМЕНТ документ КСИЛОФОН",
+);
 
 // --- Empty and non-letter input ---
 assert.equal(stemText("").totalWords, 0);
@@ -72,11 +88,24 @@ assert.equal(stemText("123 456 !!! ...").totalWords, 0);
 assert.equal(stemText("…").totalWords, 0);
 assert.deepEqual(findTokenSpans("  \n\t "), []);
 
-// --- Hyphenated words: parts looked up independently ---
+// --- Hyphenated words: parts looked up independently, honest match status ---
 const hyphen = stemText("по-русски кто-то");
 assert.equal(hyphen.words[0].source, "по-русски");
 assert.equal(hyphen.words[0].stem, null); // neither part is in the dictionary
+assert.equal(hyphen.words[0].match, "none"); // no fabricated "prefix"
 assert.equal(hyphen.words[1].stem, null);
+assert.equal(hyphen.words[1].match, "none");
+
+// Exact + exact → exact; exact + prefix → prefix; partial miss → prefix;
+// all miss → none.
+const allExact = lookupHyphenated("документ-индекс");
+assert.equal(aggregateMatch(allExact), "exact");
+assert.equal(aggregateMatch(lookupHyphenated("документ-информационности")), "prefix");
+assert.equal(aggregateMatch(lookupHyphenated("документ-ксилофон")), "prefix");
+assert.equal(aggregateMatch(lookupHyphenated("ксилофон-баян")), "none");
+assert.equal(stemText("документ-ксилофон").words[0].match, "prefix");
+assert.equal(stemText("ксилофон-баян").words[0].match, "none");
+assert.equal(stemText("ксилофон-баян").words[0].stem, null);
 
 // --- Word-by-word mapping evidence ---
 const table = stemText("документы документами");
@@ -94,7 +123,6 @@ const withMisses = stemText("документ ксилофоном индекс"
 assert.equal(withMisses.totalWords, 3);
 assert.equal(withMisses.matched, 2);
 assert.equal(withMisses.missed, 1);
-// A missing word passes through unchanged.
 assert.equal(
   renderStemmedText("документ ксилофоном индекс", withMisses),
   "документ ксилофоном индекс",
@@ -122,7 +150,6 @@ assert.deepEqual(lookupStem("людях"), {
 });
 assert.equal(lookupStem("сравнение").stem, "сравнен");
 assert.equal(lookupStem("числах").stem, "числ");
-// Stress-marked value removed: the stem renders without combining accents.
 assert.equal(lookupStem("выть").stem, "вы");
 
 console.log("lab 2 dictionary stemming tests passed ✓");

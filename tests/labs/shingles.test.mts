@@ -1,29 +1,56 @@
 /**
- * Lab 3 (shingles) tests: canonicalization, 8-word overlapping shingles,
- * SHA-1 vectors, the 84 control-sum construction, and pairwise similarity
- * for identical / disjoint / partially overlapping texts.
+ * Lab 3 (shingles) tests: canonicalization (including conservative English
+ * singularization), 8-word overlapping shingles, SHA-1 and salted-hash
+ * known-answer vectors, the 84 control-sum construction, empty-sketch
+ * rejection, and pairwise similarity for identical / disjoint / partially
+ * overlapping texts.
  */
 
 import assert from "node:assert/strict";
 import {
   HASH_FUNCTION_COUNT,
+  EmptySketchError,
   buildShingles,
   buildSketch,
   canonicalize,
   compareAllPairs,
   compareSketches,
+  contentKey,
   countEnglishWords,
   hashShingle,
   shingleText,
   sha1Hex,
+  singularize,
 } from "../../src/lib/labs/shingles/shingles.ts";
 
-// --- Canonicalization: lowercase, punctuation stripped, stop words removed ---
+// --- Canonicalization: lowercase, punctuation/tags/digits, stop words ---
 assert.deepEqual(canonicalize("The quick, brown Fox!"), ["quick", "brown", "fox"]);
 assert.deepEqual(canonicalize("of the and"), []);
 assert.deepEqual(canonicalize("It IS what it is"), ["what"]);
-// Digits and punctuation are separators (English letters only).
 assert.deepEqual(canonicalize("abc123def"), ["abc", "def"]);
+assert.deepEqual(canonicalize("<p>Hello</p> world"), ["hello", "world"]);
+// Source text is never mutated by canonicalization.
+const source = "The CATS, boxes and children!";
+const frozen = source.slice();
+canonicalize(source);
+assert.equal(source, frozen);
+
+// --- Conservative English singularization (documented scope, not full POS) ---
+assert.equal(singularize("cats"), "cat");
+assert.equal(singularize("classes"), "class");
+assert.equal(singularize("boxes"), "box");
+assert.equal(singularize("companies"), "company");
+assert.equal(singularize("children"), "child");
+assert.equal(singularize("men"), "man");
+assert.equal(singularize("indices"), "index");
+// Words that are singular or ambiguous stay unchanged.
+assert.equal(singularize("bus"), "bus");
+assert.equal(singularize("class"), "class");
+assert.equal(singularize("analysis"), "analysis");
+assert.equal(singularize("this"), "this");
+// Plural forms canonicalize to the same token as their singular counterparts.
+assert.deepEqual(canonicalize("cat cats CATS"), ["cat", "cat", "cat"]);
+assert.deepEqual(canonicalize("a box boxes"), ["box", "box"]);
 
 // --- Word counting (≥1000-word contract) ---
 assert.equal(countEnglishWords("one two three"), 3);
@@ -47,29 +74,59 @@ assert.equal(
   sha1Hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"),
   "84983e441c3bd26ebaae4aa1f95129e5e54670f1",
 );
-// Determinism.
 assert.equal(sha1Hex("Разум дан человеку"), sha1Hex("Разум дан человеку"));
 
-// --- 84 hash functions: distinct distributions, stable output ---
+// --- 84 salted hash functions: known answers + distinct domains ---
 assert.equal(HASH_FUNCTION_COUNT, 84);
+// Known-answer vectors: hashShingle(salt, text) === first 6 bytes of
+// SHA-1(`${salt}:${text}`) as a big-endian 48-bit integer.
+function expectedFold(salt: number, text: string): number {
+  const hex = sha1Hex(`${salt}:${text}`);
+  return Number.parseInt(hex.slice(0, 12), 16);
+}
+assert.equal(hashShingle(0, "a b c d e f g h"), expectedFold(0, "a b c d e f g h"));
+assert.equal(hashShingle(7, "alpha beta gamma"), expectedFold(7, "alpha beta gamma"));
+assert.equal(hashShingle(83, "shingle words here"), expectedFold(83, "shingle words here"));
+assert.equal(hashShingle(0, "a b c d e f g h"), hashShingle(0, "a b c d e f g h"));
 const values = new Set<number>();
 for (let fn = 0; fn < HASH_FUNCTION_COUNT; fn++) {
   values.add(hashShingle(fn, "a b c d e f g h"));
 }
 assert.ok(values.size > 80, "different salts must mostly produce different sums");
-assert.equal(hashShingle(0, "a b c d e f g h"), hashShingle(0, "a b c d e f g h"));
 
 // --- Sketch: control sums are per-row minima over shingles ---
 // w1..w8 avoid the stop-word list; bare "a"/"h" would be canonicalized away.
 const sketchA = buildSketch("w1 w2 w3 w4 w5 w6 w7 w8 w1 w2 w3 w4 w5 w6 w7 w8", { width: 8 });
+assert.equal(sketchA.valid, true);
 assert.equal(sketchA.tokens.length, 16);
 assert.equal(sketchA.shingles.length, 9); // 16 − 8 + 1
 assert.equal(sketchA.controlSums.length, HASH_FUNCTION_COUNT);
 assert.equal(sketchA.controlSumSources.length, HASH_FUNCTION_COUNT);
-// Repeated shingle text: minima come from the earliest occurrence.
 assert.equal(
   sketchA.controlSums.every((sum) => sum > 0),
   true,
+);
+
+// --- Empty / short texts: no fabricated 100% similarity ---
+const stopOnly = buildSketch("of the and is are", { width: 8 });
+assert.equal(stopOnly.valid, false);
+assert.equal(stopOnly.controlSums.length, 0);
+const shortText = buildSketch("one two three four five six seven", { width: 8 });
+assert.equal(shortText.valid, false);
+assert.equal(shortText.shingles.length, 0);
+assert.throws(() => compareSketches(stopOnly, stopOnly), EmptySketchError);
+assert.throws(() => compareSketches(stopOnly, sketchA), EmptySketchError);
+assert.throws(() => compareSketches(sketchA, stopOnly), EmptySketchError);
+// A 1000-word source of stop words only still cannot be compared.
+const emptyAfterCanonicalization = buildSketch("the ".repeat(1000), { width: 8 });
+assert.equal(emptyAfterCanonicalization.valid, false);
+assert.throws(
+  () =>
+    compareAllPairs([
+      { name: "a", text: "", sketch: emptyAfterCanonicalization },
+      { name: "b", text: "", sketch: emptyAfterCanonicalization },
+    ]),
+  EmptySketchError,
 );
 
 // --- Identical texts: similarity 100% ---
@@ -81,7 +138,7 @@ assert.equal(identical.matches, HASH_FUNCTION_COUNT);
 assert.equal(identical.similarityPercent, 100);
 
 // --- Disjoint texts: similarity 0% ---
-const other = Array.from({ length: 40 }, (_, i) => `other${i}`).join(" ");
+const other = Array.from({ length: 40 }, (_, i) => `zebra${i}`).join(" ");
 const s3 = buildSketch(other, { width: 8 });
 const disjoint = compareSketches(s1, s3);
 assert.equal(disjoint.matches, 0);
@@ -100,9 +157,10 @@ assert.ok(partial.similarityPercent > 0 && partial.similarityPercent < 100);
 // --- Repeated phrases & punctuation (the assignment's similarity source) ---
 const base = "the quick brown fox jumps over the lazy dog".repeat(20);
 const withPunct = (base.match(/.{1,9}(\s|$)/g) ?? []).join(". ") + "!";
-const sketchPunct = buildSketch(withPunct, { width: 8 });
-const sketchPlain = buildSketch(base, { width: 8 });
-const punctComparison = compareSketches(sketchPunct, sketchPlain);
+const punctComparison = compareSketches(
+  buildSketch(withPunct, { width: 8 }),
+  buildSketch(base, { width: 8 }),
+);
 assert.ok(
   punctComparison.similarityPercent > 90,
   "punctuation must not affect canonical comparison",
@@ -127,6 +185,10 @@ assert.deepEqual(
     [2, 3],
   ],
 );
+
+// --- Duplicate identity is content-based, not filename-based ---
+assert.equal(contentKey("Hello  WORLD\n"), contentKey("hello world"));
+assert.notEqual(contentKey("hello world"), contentKey("hello worlds"));
 
 // --- 1000-word boundary ---
 const words1000 = Array.from({ length: 1000 }, (_, i) => `w${i}`).join(" ");

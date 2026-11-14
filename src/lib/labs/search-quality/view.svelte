@@ -9,7 +9,7 @@
 	import * as Table from '#lib/components/ui/table';
 	import { getVariantFields, getVariantInfo, labs } from '#lib/labs';
 	import { shellStore } from '#lib/shell.svelte';
-	import { MIN_WORDS_PER_TEXT, searchQualityStore as store } from './store.svelte';
+	import { MIN_WORDS_PER_TEXT, REQUIRED_CANDIDATES, searchQualityStore as store } from './store.svelte';
 	import { SAMPLE_SIZES } from './experiment';
 	import ChartLineIcon from '@lucide/svelte/icons/chart-line';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
@@ -139,9 +139,12 @@
 				}}
 			/>
 			<p class="text-muted-foreground text-sm">
-				Первый документ — запрос (по умолчанию). Релевантность задаётся явно при добавлении и может
-				быть изменена в списке — это основа истинности для расчёта a, b, c, d. Требуется запрос и
-				не менее 9 кандидатов, каждый не менее {MIN_WORDS_PER_TEXT} английских слов.
+				Первый документ — отдельный запрос (не входит в выдачу). Метки релевантности задаются
+				пользователем при добавлении и могут быть изменены в списке — это эталонная разметка, а не
+				объективная истина (методичка различает объективную релевантность и субъективную
+				пертинентность). Выборки {SAMPLE_SIZES.join(', ')} — это число документов-кандидатов;
+				требуется запрос и не менее {REQUIRED_CANDIDATES} кандидатов, каждый не менее
+				{MIN_WORDS_PER_TEXT} английских слов.
 			</p>
 
 			{#if store.documents.length > 0}
@@ -188,7 +191,7 @@
 				value={store.thresholdPercent}
 				onchange={(event) => {
 					const value = Number((event.currentTarget as HTMLInputElement).value);
-					if (Number.isFinite(value)) store.thresholdPercent = Math.min(100, Math.max(0, value));
+					store.setThreshold(value);
 				}}
 			/>
 			<p class="text-muted-foreground text-sm">
@@ -198,7 +201,7 @@
 
 		<Button
 			onclick={() => void store.run(shingleWidth)}
-			disabled={store.isProcessing || store.documents.length < 10}
+			disabled={store.isProcessing || store.documents.length < REQUIRED_CANDIDATES + 1}
 		>
 			<ChartLineIcon data-icon="inline-start" />
 			Вычислить коэффициенты
@@ -226,9 +229,12 @@
 		<CardHeader>
 			<CardTitle>Таблица результатов</CardTitle>
 			<CardDescription>
-				Запрос: «{result.queryName}», порог выдачи {result.thresholdPercent}% схожести. Значения
-				вычислены из количеств a, b, c, d по формулам: P = a/(a+b), R = a/(a+c), Fallout = b/(b+d),
-				F1 = 2PR/(P+R).
+				Запрос: «{result.queryName}» (в выдачу не входит), порог выдачи {result.thresholdPercent}%
+				схожести. Значения вычислены из количеств a, b, c, d по формулам: P = a/(a+b), R =
+				a/(a+c), Fallout = b/(b+d), F1 = 2PR/(P+R), где a — выданные релевантные, b — выданные
+				нерелевантные, c — не выданные релевантные, d — не выданные нерелевантные (по таблице
+				методички; в её текстовом описании d ошибочно повторяет c). При нулевом знаменателе
+				доля принимается равной 0 — соглашение приложения, методичка его не задаёт.
 			</CardDescription>
 		</CardHeader>
 		<CardContent>
@@ -367,12 +373,12 @@
 									<Table.Row>
 										<Table.Head>Документ</Table.Head>
 										<Table.Head>Схожесть</Table.Head>
-										<Table.Head>Релевантность (истина)</Table.Head>
+										<Table.Head>Релевантность (эталонная разметка)</Table.Head>
 										<Table.Head>Выдан системой</Table.Head>
 									</Table.Row>
 								</Table.Header>
 								<Table.Body>
-									{#each sample.documents as doc (doc.name)}
+									{#each sample.documents as doc (doc.id)}
 										<Table.Row>
 											<Table.Cell class="font-medium">{doc.name}</Table.Cell>
 											<Table.Cell>{doc.similarityPercent}%</Table.Cell>

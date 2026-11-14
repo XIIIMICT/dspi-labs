@@ -29,8 +29,10 @@
 	let filter = $state('');
 	let limit = $state(PAGE_SIZE);
 
+	// The manual's term/document list is sorted alphabetically; frequency
+	// remains visible as a secondary badge on each row.
 	const sortedTerms = $derived(
-		[...app.dictionary.values()].sort((a, b) => b.collectionFrequency - a.collectionFrequency),
+		[...app.dictionary.values()].sort((a, b) => a.term.localeCompare(b.term, 'ru')),
 	);
 	const filteredTerms = $derived.by(() => {
 		const query = filter.trim().toLowerCase();
@@ -59,7 +61,7 @@
 	<PageHeader
 		backHref={resolve('/')}
 		title="Инвертированный индекс"
-		subtitle="Термины отсортированы по частоте в коллекции; раскройте термин, чтобы увидеть постинги"
+		subtitle="Термины отсортированы по алфавиту; частота в коллекции указана в строке, раскройте термин, чтобы увидеть постинги"
 	/>
 
 	{#if app.dictionary.size === 0}
