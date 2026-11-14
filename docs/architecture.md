@@ -10,8 +10,7 @@ This document describes the multi-lab architecture introduced with Labs 2–4.
 src/lib/labs/
   registry.json                 # ordered lab metadata (title, folder, task, variants)
   index.ts                      # only reader of registry.json; derives 1-based numbers
-  implemented.ts                # store-module discovery (import.meta.glob store.svelte.ts)
-  lab-views.ts                  # folder → view component map (the rendering contract)
+  lab-views.ts                  # SINGLE source of truth: folder → view component map
   shared/
     lab1-corpus.ts              # pure snapshot mapper over Lab 1 documents
   inverted-index/               # Lab 1 (inverted index & dictionary)
@@ -22,11 +21,14 @@ src/lib/labs/
 
 - `registry.json` is the single source of lab identity. `index.ts` derives
   numbers and exposes `getVariantNumbers` / `getVariantInfo` / `getVariantFields`.
-- A lab **renders** only when its folder is registered in `lab-views.ts`.
-  The `implemented` flag from `store.svelte.ts` discovery remains a data-level
-  signal, but `src/routes/+page.svelte` dispatches through `getLabView`:
-  an unregistered folder shows the «not implemented» placeholder, so a stray
-  store module can never render the wrong screen.
+- A lab **renders** — and therefore counts as implemented — only when its
+  folder is registered in `lab-views.ts`. `src/routes/+page.svelte`
+  dispatches through `getLabView`; an unregistered folder shows the
+  «not implemented» placeholder, so a stray store module can never render
+  the wrong screen. `index.ts` deliberately does not import `lab-views.ts`
+  (which imports `.svelte` components): plain-bun tests import `index.ts`
+  without a Svelte compiler. There is exactly ONE mechanism, no glob
+  discovery and no separate `implemented` flag.
 - Each lab folder holds: pure algorithm modules (no Svelte imports, runnable
   under plain `bun`), a `store.svelte.ts` (runes UI state; the only place
   `svelte-sonner` toasts and browser File APIs appear), and `view.svelte`

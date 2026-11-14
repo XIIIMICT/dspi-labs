@@ -125,8 +125,9 @@ subscript as an embedded image, so plain extraction showed "величины -м
 - Variant selection lives in `shell.svelte.ts` (keyed per lab, validated on lab
   switch, falling back to the first variant of the new lab).
 - Registry-driven dispatch: `src/routes/+page.svelte` renders the active lab's
-  view through a static folder→view map; a lab renders only when its view is
-  registered (not merely because a store module exists).
+  view through a static folder→view map (`lab-views.ts`) — the SINGLE source of
+  truth for "implemented". A lab renders only when its view is registered; there
+  is no glob-discovery flag or separate `implemented` field.
 - Lab 1 corpus exposed through a narrow read-only accessor for Lab 3 (id, name,
   text) — no UI internals imported.
 - Pure algorithm modules (no Svelte imports) so tests run under Bun directly;

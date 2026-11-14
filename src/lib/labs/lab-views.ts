@@ -1,11 +1,11 @@
 /**
- * Explicit lab view registry: folder → view component. A lab is rendered by
- * `src/routes/+page.svelte` only when its folder is present here; the
- * `implemented` flag derived from `store.svelte.ts` discovery stays a data-level
- * signal, while this map is the actual rendering contract. Adding a lab view
- * means adding the folder here — an unregistered folder still shows the
+ * Explicit lab view registry: folder → view component. This is the SINGLE
+ * source of truth for "a lab is implemented": `src/routes/+page.svelte`
+ * renders a lab only when its folder is registered here. Adding a lab view
+ * means adding the folder here — an unregistered folder shows the
  * "not implemented" placeholder, so a stale store module can never render
- * the wrong screen.
+ * the wrong screen. `index.ts` deliberately does not import this module
+ * (it pulls in `.svelte` components; plain-bun tests import `index.ts`).
  */
 
 import type { Component } from "svelte";

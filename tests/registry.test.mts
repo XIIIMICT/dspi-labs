@@ -3,11 +3,15 @@
  * titles/folders/tasks, positive integer variant numbers with no overlaps
  * within a lab, and a non-empty language string. Lab-specific variant fields
  * are validated by the tests in tests/labs/.
+ *
+ * Rendering is decided solely by `src/lib/labs/lab-views.ts`; this test also
+ * asserts the registry carries no separate `implemented` flag.
  */
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { getLabView } from "../src/lib/labs/lab-views.ts";
 
 interface LabVariantJson {
   variants: unknown;
@@ -75,6 +79,15 @@ for (const [labIndex, lab] of registry.entries()) {
       `${vprefix}: language must be a non-empty string`,
     );
   }
+
+  assert.ok(
+    !("implemented" in lab),
+    `${prefix}: registry must not carry a separate implemented flag (lab-views.ts is the single source)`,
+  );
+  assert.ok(
+    typeof lab.folder === "string" && getLabView(lab.folder as string) !== undefined,
+    `${prefix}: folder must be registered in lab-views.ts to render`,
+  );
 
   console.log(
     `${prefix} (${String(lab.title)}): variants ${[...seen].sort((a, b) => a - b).join(", ")}`,
