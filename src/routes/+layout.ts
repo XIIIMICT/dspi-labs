@@ -1,5 +1,5 @@
-// Приложение полностью клиентское: документы загружаются и
-// обрабатываются в браузере, поэтому SSR отключаем и собираем
-// статический SPA (см. adapter-static с fallback в vite.config.ts).
+// The app is fully client-side: documents are loaded and processed in the
+// browser, so SSR is disabled and the static SPA fallback is used (see
+// adapter-static in vite.config.ts).
 export const ssr = false;
 export const prerender = false;

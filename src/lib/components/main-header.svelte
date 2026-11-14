@@ -5,16 +5,23 @@
 	import * as Select from '#lib/components/ui/select';
 	import { Tabs, TabsList, TabsTrigger } from '#lib/components/ui/tabs';
 	import ThemeToggle from './theme-toggle.svelte';
+	import { shellStore } from '#lib/shell.svelte';
 	import { getVariantFields, getVariantInfo, getVariantNumbers, labs } from '#lib/labs';
 
-	let activeLab = $state('1');
 	let variant = $state('8');
 	let assignmentOpen = $state(false);
 
-	const lab = $derived(labs.find((l) => String(l.number) === activeLab) ?? labs[0]);
+	const lab = $derived(labs.find((l) => String(l.number) === shellStore.activeLab) ?? labs[0]);
 	const variantNumbers = $derived(getVariantNumbers(lab));
 	const variantInfo = $derived(getVariantInfo(lab, Number(variant)));
 	const variantFields = $derived(getVariantFields(variantInfo));
+
+	// Keep the selected variant valid when switching to a lab with a different set.
+	$effect(() => {
+		if (variantNumbers.length > 0 && !variantNumbers.includes(Number(variant))) {
+			variant = String(variantNumbers[0]);
+		}
+	});
 </script>
 
 <header class="sticky top-0 z-10 border-b border-foreground/10 bg-background">
@@ -28,11 +35,11 @@
 		</div>
 		<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
 			<Button size="sm" onclick={() => (assignmentOpen = true)}>Задание</Button>
-			<Tabs bind:value={activeLab}>
+			<Tabs bind:value={shellStore.activeLab}>
 				<TabsList>
 					{#each labs as item (item.number)}
-						<TabsTrigger value={String(item.number)} disabled={item.number !== 1}>
-							{#if activeLab === String(item.number)}
+						<TabsTrigger value={String(item.number)}>
+							{#if shellStore.activeLab === String(item.number)}
 								<span class="sm:hidden">ЛР {item.number}</span>
 								<span class="hidden sm:inline">Лабораторная работа {item.number}</span>
 							{:else}

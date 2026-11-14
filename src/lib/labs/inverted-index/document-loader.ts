@@ -1,8 +1,8 @@
 /**
- * Загрузка документов — порт `data/DocumentLoader.kt`.
- * В Android-версии файлы открывались через `contentResolver` по `Uri`,
- * здесь текст читается из объектов `File` (диалог выбора или
- * drag-and-drop) либо из встроенных демо-текстов.
+ * Document loading — port of `data/DocumentLoader.kt`.
+ * The Android version opened files through `contentResolver` by `Uri`;
+ * here text is read from `File` objects (picker or drag-and-drop) or from
+ * built-in demo texts.
  */
 
 import type { Document, DocumentSource } from "./models";
@@ -10,20 +10,20 @@ import { tokenizeAndNormalize } from "./text-processing";
 
 const yieldToUi = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-/** Оборачивает выбранные пользователем файлы в источники документов. */
+/** Wraps user-selected files as document sources. */
 export function sourcesFromFiles(files: File[]): DocumentSource[] {
   return files.map((file) => ({
     name: file.name,
-    // Браузер не отдаёт полный путь до файла; при выборе папки
-    // доступен относительный путь `webkitRelativePath`.
+    // Browsers do not expose a full local path; a folder selection provides
+    // the relative `webkitRelativePath` instead.
     path: (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name,
     read: () => file.text(),
   }));
 }
 
 /**
- * Читает источники, пропускает пустые файлы и файлы без слов,
- * ведёт тот же журнал сообщений, что и оригинальный `loadFromUris`.
+ * Reads sources, skips empty or wordless files, and emits the same step log
+ * as the original `loadFromUris`.
  */
 export async function loadFromSources(
   sources: DocumentSource[],

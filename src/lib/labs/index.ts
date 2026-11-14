@@ -1,4 +1,5 @@
 import registry from "./registry.json";
+import { isImplemented } from "./implemented";
 
 /** A variant dictionary: a set of variant numbers plus lab-specific fields. */
 export interface LabVariant {
@@ -18,11 +19,17 @@ export interface LabDefinition {
   variants: LabVariant[];
   /** 1-based ordinal number, derived from the registry order. */
   number: number;
+  /** Whether the lab has an implementation module (a `store.svelte.ts`). */
+  implemented: boolean;
 }
 
-export const labs: LabDefinition[] = (registry as Omit<LabDefinition, "number">[]).map(
-  (entry, index) => ({ ...entry, number: index + 1 }),
-);
+export const labs: LabDefinition[] = (
+  registry as Omit<LabDefinition, "number" | "implemented">[]
+).map((entry, index) => ({
+  ...entry,
+  number: index + 1,
+  implemented: isImplemented(entry.folder),
+}));
 
 /** All variant numbers of a lab, ascending — the header select items. */
 export function getVariantNumbers(lab: LabDefinition): number[] {

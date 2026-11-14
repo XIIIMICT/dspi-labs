@@ -1,16 +1,16 @@
 /**
- * Токенизация, нормализация и алгоритмический стемминг —
- * порт `data/TextProcessing.kt` на TypeScript.
+ * Tokenization, normalization, and algorithmic stemming — port of
+ * `data/TextProcessing.kt` to TypeScript.
  *
- * Порядок обработки текста полностью повторяет оригинал:
- *   1) приведение к нижнему регистру;
- *   2) замена длинных и коротких тире (— –) на пробелы;
- *   3) удаление всего, что не буква и не пробел (`[^\p{L}\s]`);
- *   4) сведение повторяющихся пробелов к одному (`\s+`);
- *   5) разбиение по пробелу и стемминг каждого слова.
+ * The processing order exactly matches the original:
+ *   1) lowercase;
+ *   2) replace long and short dashes (— –) with spaces;
+ *   3) remove everything that is not a letter or whitespace (`[^\p{L}\s]`);
+ *   4) collapse repeated whitespace (`\s+`);
+ *   5) split on spaces and stem each word.
  */
 
-/** Русские стоп-слова — список перенесён из оригинала без изменений. */
+/** Russian stop words — copied from the original unchanged. */
 const russianStopWords = new Set<string>([
   "и",
   "в",
@@ -132,8 +132,8 @@ const russianStopWords = new Set<string>([
 ]);
 
 /**
- * Русские суффиксы для наивного алгоритмического стемминга.
- * Дубли в списке сохранены — так было в оригинальном Kotlin-коде.
+ * Russian suffixes for the naive algorithmic stemmer.
+ * Duplicates are kept intentionally — they exist in the original Kotlin code.
  */
 const russianSuffixes = [
   "ами",
@@ -166,14 +166,14 @@ const russianSuffixes = [
 ];
 
 /**
- * Превращает текст в список стемов: нижний регистр, удаление тире и
- * небуквенных символов, нормализация пробелов, разбиение на слова.
+ * Converts text to a list of stems: lowercase, dash and non-letter removal,
+ * whitespace normalization, split into words.
  */
 export function tokenizeAndNormalize(text: string): string[] {
   const cleaned = text
     .toLowerCase()
-    .replaceAll("\u2013", " ") // короткое тире
-    .replaceAll("\u2014", " ") // длинное тире
+    .replaceAll("\u2013", " ") // en dash
+    .replaceAll("\u2014", " ") // em dash
     .replace(/[^\p{L}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -181,15 +181,14 @@ export function tokenizeAndNormalize(text: string): string[] {
   return cleaned.split(" ").map((w) => stem(w));
 }
 
-/** Убирает из списка служебные слова (стоп-слова). */
+/** Filters stop words out of a token list. */
 export function removeStopWords(tokens: string[]): string[] {
   return tokens.filter((t) => t.length > 0 && !russianStopWords.has(t));
 }
 
 /**
- * Наивный стемминг: последовательно перебирает суффиксы и срезает
- * каждый подходящий, если после обрезки остаётся больше двух символов
- * (условие `w.length > suffix.length + 2` из оригинала).
+ * Naive stemming: iterates suffixes and strips each match as long as more
+ * than two characters remain (`w.length > suffix.length + 2` in the original).
  */
 export function stem(word: string): string {
   let w = word;
@@ -201,7 +200,7 @@ export function stem(word: string): string {
   return w;
 }
 
-/** Слово с координатами в исходном тексте и его стемом. */
+/** A word with its coordinates in the source text and its stem. */
 export interface WordOccurrence {
   start: number;
   end: number;
@@ -210,8 +209,8 @@ export interface WordOccurrence {
 }
 
 /**
- * Находит все слова в тексте (`\p{L}+`, как в `SearchScreen.kt`)
- * и возвращает их вместе с позицией и стемом.
+ * Finds all words in the text (`\p{L}+`, as in `SearchScreen.kt`) and returns
+ * them with their position and stem.
  */
 export function findWords(text: string): WordOccurrence[] {
   const result: WordOccurrence[] = [];
@@ -229,9 +228,8 @@ export function findWords(text: string): WordOccurrence[] {
 }
 
 /**
- * Собирает все исходные формы слова, встречающиеся в текстах,
- * стем которых совпадает со стемом запроса (как «Показать формы
- * слова» в `MainScreen.kt`).
+ * Collects all source word forms across the texts whose stem matches the
+ * query stem (like "Show word forms" in `MainScreen.kt`).
  */
 export function findWordForms(documents: { rawText: string }[], query: string): string[] {
   const normalizedQuery = stem(query.toLowerCase());

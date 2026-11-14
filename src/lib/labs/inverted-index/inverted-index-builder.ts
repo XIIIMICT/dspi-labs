@@ -1,18 +1,17 @@
 /**
- * Построение инвертированного индекса и словаря —
- * порт `data/InvertedIndexBuilder.kt` на TypeScript.
+ * Inverted index and dictionary builder — port of
+ * `data/InvertedIndexBuilder.kt` to TypeScript.
  *
- * Индекс хранится как `Map<string, TermInfo>` (аналог `HashMap`
- * из оригинала): для каждого стема — список постингов с частотой
- * термина в документе и позициями вхождений. Гибридная схема
- * оригинала сохранена: хеш-таблица даёт доступ к термину за O(1),
- * а списки постингов и позиций растут по мере необходимости.
+ * The index is a `Map<string, TermInfo>` (like the original `HashMap`):
+ * each stem maps to postings with in-document frequency and positions.
+ * The original hybrid scheme is preserved: the hash table gives O(1) term
+ * lookup, while posting and position lists grow on demand.
  */
 
 import type { Document, TermInfo } from "./models";
 import { removeStopWords, tokenizeAndNormalize } from "./text-processing";
 
-/** Пропускает ход цикла событий, чтобы логи успевали отрисовываться. */
+/** Yields to the event loop so log lines can render between steps. */
 const yieldToUi = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 export class InvertedIndexBuilder {

@@ -1,19 +1,18 @@
 /**
- * Демо-коллекция документов. Лабораторная работа требует 100 схожих
- * по тематике текстов не менее 1000 слов, в которых слова повторяются
- * и внутри одного текста, и между текстами. Android-версия брала файлы
- * с устройства; для веб-страницы встроена генерация такой коллекции
- * прямо в браузере (детерминированная — при каждом запуске одинаковая).
+ * Demo document collection. The lab requires 100 thematically related texts
+ * of at least 1000 words, with words repeated both within one text and across
+ * texts. The Android version read files from the device; the web version
+ * generates the collection in the browser (deterministically — identical on
+ * every run).
  *
- * Тексты четырёх тематик (поиск, распределённые системы, базы данных,
- * обработка текста) сознательно пересекаются по словарю: слова
- * «документ», «индекс», «система», «слова», «поиск», «данные»
- * встречаются во всех темах.
+ * The four themes (search, distributed systems, databases, text processing)
+ * deliberately share vocabulary: "документ", "индекс", "система", "слова",
+ * "поиск", "данные" appear in every theme.
  */
 
 import type { DocumentSource } from "./models";
 
-/** Детерминированный ГПСЧ (mulberry32) — коллекция воспроизводима. */
+/** Deterministic PRNG (mulberry32) — the collection is reproducible. */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -29,7 +28,7 @@ function pick<T>(rng: () => number, items: T[]): T {
   return items[Math.floor(rng() * items.length)];
 }
 
-/** Слоты для шаблонов предложений (согласование зашито в шаблон). */
+/** Slots for sentence templates (agreement is baked into each template). */
 const SLOTS = {
   big: ["тысячи", "миллионы", "сотни тысяч"],
   sys: ["поисковая система", "информационная система", "рекомендательная система"],
@@ -161,7 +160,7 @@ const THEMES: Theme[] = [
   },
 ];
 
-/** Предложения, общие для всех тематик, — перекрёстное повторение слов. */
+/** Sentences shared by all themes — creates cross-text word repetition. */
 const SHARED_SENTENCES = [
   "Документы обрабатываются алгоритмом и попадают в общий индекс системы.",
   "Данные системы хранят тексты документов и статистику слов.",
@@ -178,15 +177,15 @@ const SHARED_SENTENCES = [
 ];
 
 export interface DemoOptions {
-  /** Число документов (по умолчанию 100 — как в задании). */
+  /** Number of documents (default 100 — as required by the task). */
   count?: number;
-  /** Минимальное число слов в каждом документе. */
+  /** Minimum number of words per document. */
   minWords?: number;
 }
 
 /**
- * Генерирует демо-коллекцию: документы четырёх тематик, каждый
- * объёмом не менее `minWords` слов.
+ * Generates the demo collection: documents across four themes, each with at
+ * least `minWords` words.
  */
 export function generateDemoCollection(options: DemoOptions = {}): DocumentSource[] {
   const { count = 100, minWords = 1000 } = options;

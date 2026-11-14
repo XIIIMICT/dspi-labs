@@ -1,9 +1,9 @@
 /**
- * Модели данных — порт `data/DocumentModels.kt` из исходного
- * Android-приложения на TypeScript.
+ * Data models — port of `data/DocumentModels.kt` from the original
+ * Android application.
  */
 
-/** Документ: идентификатор, имя, путь и исходный текст (порт `Document`). */
+/** A document: id, name, path, and raw text (port of `Document`). */
 export interface Document {
   id: number;
   name: string;
@@ -11,14 +11,14 @@ export interface Document {
   rawText: string;
 }
 
-/** Постинг: вхождение термина в конкретный документ (порт `Posting`). */
+/** A posting: one term occurrence in a document (port of `Posting`). */
 export interface Posting {
   docId: number;
   termFrequency: number;
   positions: number[];
 }
 
-/** Сведения о термине словаря (порт `TermInfo`). */
+/** Dictionary term statistics (port of `TermInfo`). */
 export interface TermInfo {
   term: string;
   docFrequency: number;
@@ -27,9 +27,9 @@ export interface TermInfo {
 }
 
 /**
- * Источник текста. В Android-версии документы открывались через
- * `contentResolver`; в браузере источник — либо выбранный пользователем
- * `File`, либо встроенный демо-текст.
+ * Text source. The Android version opened documents via `contentResolver`;
+ * in the browser a source is either a user-selected `File` or a built-in
+ * demo text.
  */
 export interface DocumentSource {
   name: string;

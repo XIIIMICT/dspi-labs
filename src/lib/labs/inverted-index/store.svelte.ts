@@ -1,7 +1,7 @@
 /**
- * Глобальное состояние приложения — порт `MainViewModel` и mutable-состояний
- * `MainActivity` из Android-версии. Хранится в модуле с рунами Svelte 5,
- * поэтому все экраны видят одни и те же документы, словарь и журнал.
+ * Global app state — port of `MainViewModel` and the mutable state of
+ * `MainActivity`. A Svelte 5 runes module keeps documents, dictionary, and
+ * log shared across all screens.
  */
 
 import { toast } from "svelte-sonner";
@@ -11,32 +11,32 @@ import { generateDemoCollection } from "./demo-texts";
 import type { Document, DocumentSource, TermInfo } from "./models";
 import { findWordForms, stem } from "./text-processing";
 
-/** Журнал хранит не более этого числа строк (в оригинале показывались последние 200). */
+/** The log keeps at most this many lines (the original showed the last 200). */
 const MAX_LOG_ENTRIES = 500;
 
 class AppStore {
-  /** Список загруженных документов (`documents` в MainActivity). */
+  /** Loaded documents (`documents` in MainActivity). */
   documents = $state<Document[]>([]);
 
-  /** Инвертированный индекс: стем → TermInfo (`dictionary` в MainActivity). */
+  /** Inverted index: stem → TermInfo (`dictionary` in MainActivity). */
   dictionary = $state<Map<string, TermInfo>>(new Map());
 
-  /** Журнал шагов с отметками времени (`logs` в MainActivity). */
+  /** Timestamped step log (`logs` in MainActivity). */
   logs = $state<string[]>([]);
 
-  /** Введённое слово для поиска (MainViewModel.searchQuery). */
+  /** Search input (MainViewModel.searchQuery). */
   searchQuery = $state("");
 
-  /** Найденные исходные формы слова (MainViewModel.searchResults + формы из лога). */
+  /** Found source word forms (MainViewModel.searchResults + log forms). */
   foundForms = $state<string[]>([]);
 
-  /** Стем последнего запроса. */
+  /** Stem of the latest query. */
   searchStem = $state("");
 
-  /** Признак фоновой загрузки и индексации. */
+  /** Whether loading and indexing are in progress. */
   isProcessing = $state(false);
 
-  /** Добавляет сообщение в журнал с меткой времени (emitStep в MainActivity). */
+  /** Appends a timestamped message to the log (emitStep in MainActivity). */
   emitStep(message: string): void {
     const time = new Date().toLocaleTimeString("ru-RU", { hour12: false });
     this.logs.push(`[${time}] ${message}`);
@@ -45,12 +45,12 @@ class AppStore {
     }
   }
 
-  /** Загрузка выбранных пользователем файлов (шаги 1–6 работы программы). */
+  /** Loads user-selected files (steps 1–6 of the original program). */
   async loadFromFiles(files: File[]): Promise<void> {
     await this.loadSources(sourcesFromFiles(files), "Начало загрузки выбранных документов...");
   }
 
-  /** Загрузка встроенной демо-коллекции из 100 тематических текстов. */
+  /** Loads the built-in demo collection of 100 thematic texts. */
   async loadDemoCollection(): Promise<void> {
     await this.loadSources(generateDemoCollection(), "Начало загрузки демо-текстов...");
   }
@@ -84,8 +84,8 @@ class AppStore {
   }
 
   /**
-   * «Показать формы слова»: стем запроса ищется во всех документах,
-   * найденные исходные формы слова выводятся в журнал (порт MainScreen).
+   * "Show word forms": the query stem is searched across all documents and
+   * the found source forms are written to the log (port of MainScreen).
    */
   showWordForms(): void {
     const query = this.searchQuery.trim();
@@ -105,13 +105,13 @@ class AppStore {
     this.foundForms = forms;
   }
 
-  /** Номера документов, содержащих последний запрошенный стем. */
+  /** Document ids containing the latest searched stem. */
   docIdsWithSearchStem(): Set<number> {
     const info = this.dictionary.get(this.searchStem);
     return new Set(info ? info.postings.map((p) => p.docId) : []);
   }
 
-  /** Сброс всех данных (возврат к состоянию при запуске). */
+  /** Clears all data back to the startup state. */
   reset(): void {
     if (this.isProcessing) return;
     this.documents = [];

@@ -12,6 +12,8 @@
 	import MainHeader from '#lib/components/main-header.svelte';
 	import ModalOrDrawer from '#lib/components/modal-or-drawer.svelte';
 	import { appStore as app } from '#lib/labs/inverted-index/store.svelte';
+	import { shellStore } from '#lib/shell.svelte';
+	import { labs } from '#lib/labs';
 	import type { Document } from '#lib/labs/inverted-index/models';
 	import { findWords } from '#lib/labs/inverted-index/text-processing';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
@@ -24,6 +26,7 @@
 	import UploadIcon from '@lucide/svelte/icons/upload';
 
 	const hasIndex = $derived(app.dictionary.size > 0);
+	const activeLab = $derived(labs.find((l) => String(l.number) === shellStore.activeLab) ?? labs[0]);
 	const totalTokens = $derived.by(() => {
 		let sum = 0;
 		for (const info of app.dictionary.values()) sum += info.collectionFrequency;
@@ -72,8 +75,9 @@
 
 <MainHeader />
 
-<div class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
-	<Card>
+{#if activeLab.implemented}
+	<div class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
+		<Card>
 		<CardHeader>
 			<CardTitle>Документы</CardTitle>
 			<CardDescription>
@@ -292,4 +296,9 @@
 			<p class="leading-relaxed whitespace-pre-wrap">{shownDoc.rawText}</p>
 		{/if}
 	</ModalOrDrawer>
-</div>
+	</div>
+{:else}
+	<p class="flex min-h-[60svh] items-center justify-center px-4 text-center text-lg text-muted-foreground">
+		Эта лабораторная работа ещё не реализована
+	</p>
+{/if}

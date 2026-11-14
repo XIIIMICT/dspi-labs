@@ -5,9 +5,9 @@ import { defineConfig, lazyPlugins } from "vite-plus";
 
 const basePath = process.env.BASE_PATH ?? "";
 
-// SvelteKit допускает только «» или «/путь» (начинается с «/» и не заканчивается
-// им); невалидные значения из окружения заменяются корнем сайта, а не роняют
-// сборку. Приведение типа безопасно: условие повторяет правило SvelteKit.
+// SvelteKit accepts only "" or "/path" (leading slash, no trailing slash);
+// invalid env values fall back to the site root instead of failing the build.
+// The cast is safe because the condition mirrors SvelteKit's rule.
 const base: "" | `/${string}` =
   basePath.length > 1 && basePath.startsWith("/") && !basePath.endsWith("/")
     ? (basePath as `/${string}`)
@@ -18,22 +18,20 @@ export default defineConfig({
   lint: {
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
     rules: { "vite-plus/prefer-vite-plus-imports": "error" },
-    // typeAware включает type-aware правила (no-floating-promises и т.п.).
-    // typeCheck отключён: tsgolint не понимает экспорты из .svelte и сыплет
-    // ложными TS2614 на реэкспорты shadcn-компонентов; типы проверяет
-    // svelte-check (`bun run check`).
+    // typeAware enables type-aware rules (no-floating-promises etc.).
+    // typeCheck stays off: tsgolint misreads .svelte re-exports and emits
+    // false TS2614 for shadcn components; svelte-check owns type validation.
     options: { typeAware: true, typeCheck: false },
     overrides: [
       {
-        // Идиома Svelte 5: голая ссылка на $state внутри $effect — способ
-        // подписаться на значение; правило «неиспользуемого выражения» её
-        // не понимает.
+        // Svelte 5 idiom: a bare $state read inside $effect subscribes to the
+        // value; the no-unused-expressions rule does not recognise it.
         files: ["src/**/*.svelte"],
         rules: { "no-unused-expressions": "off" },
       },
     ],
   },
-  // Проверки стейдженных файлов на каждый коммит (vp hooks + `vp staged`).
+  // Pre-commit checks for staged files (vp hooks + `vp staged`).
   staged: {
     "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc}": ["vp fmt", "vp lint --fix"],
     "*.svelte": "vp lint --fix",
@@ -49,15 +47,15 @@ export default defineConfig({
           filename.split(/[/\\]/).includes("node_modules") ? undefined : true,
       },
 
-      // Полностью статическая сборка (SPA): все маршруты обслуживаются
-      // страницей-заглушкой index.html, данные живут только в браузере.
+      // Fully static SPA: index.html is the fallback for every route; data
+      // lives in the browser only.
       adapter: adapter({
         fallback: "index.html",
       }),
 
       paths: {
-        // GitHub Pages отдаёт сайт из подкаталога /<repo>/, поэтому base path
-        // задаётся при сборке: деплой-воркфлоу экспортирует BASE_PATH.
+        // GitHub Pages serves from /<repo>/, so base is set at build time:
+        // the deploy workflow exports BASE_PATH.
         base: base,
       },
     }),
