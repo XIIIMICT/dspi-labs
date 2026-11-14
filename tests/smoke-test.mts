@@ -1,8 +1,9 @@
 /**
  * Smoke test for the TypeScript port of the lab logic: stemming,
  * tokenization, stop words, inverted index construction, and the demo
- * collection generator. Expected values are derived from the original
- * Kotlin code (TextProcessing.kt, InvertedIndexBuilder.kt).
+ * collection generator. Most expected values derive from the original Kotlin
+ * code (TextProcessing.kt, InvertedIndexBuilder.kt); the stemmer has ONE
+ * documented deviation (the bare "о" suffix, see text-processing.ts).
  */
 
 import assert from "node:assert/strict";
@@ -14,6 +15,11 @@ import {
 import { InvertedIndexBuilder } from "../src/lib/labs/inverted-index/inverted-index-builder.ts";
 import { generateDemoCollection } from "../src/lib/labs/inverted-index/demo-texts.ts";
 import type { Document } from "../src/lib/labs/inverted-index/models.ts";
+
+// --- Manual example: neuter -о forms merge (deliberate stemmer deviation) ---
+assert.equal(stem("небо"), "неб");
+assert.equal(stem("небе"), "неб");
+assert.equal(stem("неба"), "неб");
 
 // --- Stemming (port of stem(): suffix iteration, strip when remainder > 2) ---
 assert.equal(stem("кошки"), "кошк"); // "ы" is stripped

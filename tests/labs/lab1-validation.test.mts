@@ -119,6 +119,32 @@ assert.deepEqual(
 );
 assert.equal(mixed.errors.length > 0, true);
 
+// --- Manual's 3-document example: neuter -о family merges (Table 3) ---
+const manualDocs: Document[] = [
+  { id: 1, name: "d1.txt", path: "d1.txt", rawText: "Буря мглою небо кроет, вихри снежные крутя…" },
+  {
+    id: 2,
+    name: "d2.txt",
+    path: "d2.txt",
+    rawText: "Налетел порывистый ветер, закружились снежные вихри…",
+  },
+  {
+    id: 3,
+    name: "d3.txt",
+    path: "d3.txt",
+    rawText: "Закружился в небе листопад, снова листики с неба летят…",
+  },
+];
+const manualIndex = await new InvertedIndexBuilder().build(manualDocs);
+const sky = [...manualIndex.entries()].find(([term]) => term === "неб");
+assert.ok(sky, "«небо / небе / неба» must form one merged term");
+assert.deepEqual(
+  sky![1].postings.map((p) => p.docId),
+  [1, 3],
+  "manual's Table 3 shows «Небо» in documents 1 and 3",
+);
+assert.equal(sky![1].collectionFrequency, 3);
+
 // --- Hybrid storage: linked chain of fixed-capacity blocks ---
 const hybrid: HybridTerm = createHybridTerm("кошк");
 // One document, 2*BLOCK_CAPACITY+1 positions → 3 blocks (rollover).

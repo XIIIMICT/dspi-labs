@@ -59,10 +59,14 @@ the corpus lives in session memory only.
 ## Lab 1 — inverted index and dictionary
 
 Port of the original Kotlin implementation: tokenize → stop-word removal →
-suffix stemmer → `Map<stem, TermInfo>` (hybrid scheme). The ported tokenization,
-stop-word list, stemmer, and log output are compatibility-sensitive and are
-covered by snapshots in `tests/smoke-test.mts` / `tests/labs/lab1-regression.test.mts`.
-The screens moved from the root page into `inverted-index/lab1-view.svelte`;
+suffix stemmer → `Map<stem, TermInfo>` (hybrid scheme). The tokenization order,
+stop-word list, log lines and the stemmer's length guard are preserved, with
+ONE deliberate deviation: a bare `"о"` suffix is appended so neuter forms
+(«небо») merge with oblique forms («небе», «неба» → «неб»), matching the
+manual's illustrative Table 3. The manual prescribes no normalization
+algorithm, so this is an implementation choice, not a compliance fix; the
+naive stripper can over-merge («метро» → «метр»). See
+`docs/requirements-matrix.md`. The screens moved from the root page into `inverted-index/lab1-view.svelte`;
 `/invertedIndex` and `/search/[docId]/[query]` routes are untouched.
 
 Explicit additions for the registered variant («Гибридная схема», 2/8/14):

@@ -1,9 +1,9 @@
 /**
  * Lab 1 regression tests: the demo collection still meets the assignment
  * contract (100 documents × ≥1000 words, deterministic), the tokenization /
- * stemming / stop-word behavior is unchanged, and the view dispatch layer
- * routes every implemented lab folder to its own view (Lab 1 no longer being
- * the fallback for all implemented tabs).
+ * stop-word behavior is unchanged, the deliberately extended stemmer merges
+ * neuter -о forms, and the view dispatch layer routes every implemented lab
+ * folder to its own view.
  */
 
 import assert from "node:assert/strict";
@@ -18,12 +18,20 @@ import type { Document } from "../../src/lib/labs/inverted-index/models.ts";
 import { toCorpus } from "../../src/lib/labs/shared/lab1-corpus.ts";
 import { getLabView } from "../../src/lib/labs/lab-views.ts";
 
-// --- Tokenization/stemming snapshot (must stay byte-identical) ---
+// --- Tokenization / stop-word snapshots (unchanged) ---
 assert.equal(stem("кошки"), "кошк");
 assert.equal(stem("документов"), "документов"); // "ов" not in suffix list
 assert.deepEqual(tokenizeAndNormalize("Кошка — кошки, КОШКА!"), ["кошк", "кошк", "кошк"]);
 assert.deepEqual(tokenizeAndNormalize("документ123документ"), ["документ", "документ"]);
 assert.deepEqual(removeStopWords(["кошк", "и", "в", "документ", "на"]), ["кошк", "документ"]);
+
+// --- Deliberate stemmer deviation: neuter -о merges with oblique forms ---
+assert.equal(stem("небо"), "неб");
+assert.equal(stem("небе"), "неб");
+assert.equal(stem("неба"), "неб");
+assert.equal(stem("ма"), "ма"); // guard `length > suffix.length + 2` intact
+// Residual naive-stemmer limitation (documented, acceptable for the corpus).
+assert.equal(stem("метро"), stem("метр"), "«метро» over-merges with «метр»");
 
 // --- Demo collection contract ---
 const sources = generateDemoCollection();

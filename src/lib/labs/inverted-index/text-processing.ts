@@ -1,13 +1,18 @@
 /**
- * Tokenization, normalization, and algorithmic stemming — port of
- * `data/TextProcessing.kt` to TypeScript.
+ * Tokenization, normalization, and algorithmic stemming — TypeScript port of
+ * `data/TextProcessing.kt` with ONE deliberate deviation.
  *
- * The processing order exactly matches the original:
- *   1) lowercase;
- *   2) replace long and short dashes (— –) with spaces;
- *   3) remove everything that is not a letter or whitespace (`[^\p{L}\s]`);
- *   4) collapse repeated whitespace (`\s+`);
- *   5) split on spaces and stem each word.
+ * The processing order still matches the original (lowercase → dash removal →
+ * non-letter removal → whitespace collapse → split → stem), and the guard
+ * `w.length > suffix.length + 2` is unchanged. The deviation: the suffix list
+ * adds a bare `"о"` so neuter nominative forms («небо») merge with their
+ * oblique forms («небе», «неба» → «неб»), matching the manual's illustrative
+ * Table 3 («Небо | 1, 3»). The original Kotlin port lacked it, so this file
+ * is NO LONGER a byte-faithful port of the stemmer.
+ *
+ * Residual limitation of this naive suffix stripper: it can over-merge, e.g.
+ * «метро» → «метр» would collide with the real «метр». That is acceptable for
+ * the educational corpus; the manual prescribes no normalization algorithm.
  */
 
 /** Russian stop words — copied from the original unchanged. */
@@ -163,6 +168,10 @@ const russianSuffixes = [
   "и",
   "ь",
   "й",
+  // Deliberate deviation from the Kotlin port: merge neuter -о forms with
+  // their oblique cases (see module header). Appended last to preserve the
+  // original suffix iteration order.
+  "о",
 ];
 
 /**

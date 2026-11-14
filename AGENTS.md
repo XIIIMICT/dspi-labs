@@ -85,7 +85,7 @@ Do not upgrade the framework, toolchain, UI preset, or major dependencies as par
 The current lab implements an inverted index and dictionary for a collection of text documents. Its documented contract includes:
 
 - importing `.txt` files and supporting a demo collection, with collection-level validation (the app's strict interpretation: exactly 100 documents, ≥1000 linguistic word tokens each, type/readability/duplicate checks) that never destroys a valid collection on failure; the word count is a token count, not a language detector;
-- text normalization/tokenization, stop-word removal, and the existing algorithmic Russian stemmer;
+- text normalization/tokenization, stop-word removal, and the existing algorithmic Russian stemmer (with one documented deviation: a bare `"о"` suffix for neuter `-о` forms — see `docs/requirements-matrix.md`, Implementation choice);
 - building an inverted index with term frequency, document frequency, collection frequency, and posting positions. The registered hybrid scheme is explicit: each term stores positions in a linked chain of fixed-capacity blocks (`inverted-index/hybrid-storage.ts`), flattened to the historical `TermInfo` shape so ported behavior and consumers stay compatible;
 - searching for source word forms and navigating/highlighting matches inside a document;
 - showing index terms in alphabetical order (the manual's required representation) with expandable postings and frequency badges, plus inspectable per-document processing stages and repeat diagnostics.
