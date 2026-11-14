@@ -22,7 +22,7 @@
 <header class="sticky top-0 z-10 border-b border-foreground/10 bg-background">
 	<div class="mx-auto flex w-full max-w-4xl flex-col gap-2 px-4 py-3 sm:px-6">
 		<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:justify-start">
-			<h1 class="min-w-0 flex-1 text-xl font-semibold tracking-tight sm:text-2xl">
+			<h1 class="min-w-0 text-xl font-semibold tracking-tight sm:flex-1 sm:text-2xl">
 				<span class="sm:hidden">РСОИ</span>
 				<span class="hidden sm:inline">Распределённые системы обработки информации</span>
 			</h1>
@@ -35,7 +35,9 @@
 			</Button>
 			<ThemeToggle />
 		</div>
-		<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+		<div
+			class="flex flex-col items-stretch gap-2 min-[320px]:flex-row min-[320px]:flex-wrap min-[320px]:items-center min-[320px]:justify-between min-[320px]:gap-x-3 min-[320px]:gap-y-2"
+		>
 			<Button
 				size="sm"
 				class="hidden sm:inline-flex"
@@ -43,8 +45,8 @@
 			>
 				Задание
 			</Button>
-			<Tabs bind:value={shellStore.activeLab}>
-				<TabsList>
+			<Tabs class="w-full min-[320px]:w-auto" bind:value={shellStore.activeLab}>
+				<TabsList class="w-full min-[320px]:w-auto">
 					{#each labs as item (item.number)}
 						<TabsTrigger value={String(item.number)}>
 							{#if shellStore.activeLab === String(item.number)}
@@ -62,7 +64,7 @@
 				value={variant}
 				onValueChange={(value: string) => shellStore.selectVariant(Number(value))}
 			>
-				<Select.Trigger class="w-32">Вариант {variant}</Select.Trigger>
+				<Select.Trigger class="w-full min-[320px]:w-32">Вариант {variant}</Select.Trigger>
 				<Select.Content>
 					<Select.Group>
 						{#each variantNumbers as n (n)}
