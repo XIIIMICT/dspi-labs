@@ -177,4 +177,26 @@ assert.equal(lookupStem("сравнение").stem, "сравнен");
 assert.equal(lookupStem("числах").stem, "числ");
 assert.equal(lookupStem("выть").stem, "вы");
 
+// --- Extended dictionary families (representative, hand-curated) ---
+assert.deepEqual(
+  ["текст", "текста", "тексту", "текстом", "текстах", "тексты"].map((w) => lookupStem(w).stem),
+  ["текст", "текст", "текст", "текст", "текст", "текст"],
+);
+assert.equal(lookupStem("города").stem, "город");
+assert.equal(lookupStem("нового").stem, "нов");
+assert.equal(lookupStem("большие").stem, "больш");
+assert.equal(lookupStem("пишут").stem, "писа");
+assert.equal(lookupStem("написали").stem, "писа");
+assert.equal(lookupStem("разработчики").stem, "разработчик");
+// Prefix fallback and casing still work with the wider dictionary.
+assert.equal(lookupStem("информационности").match, "prefix");
+assert.equal(lookupStem("информационности").stem, "информ");
+const casedFamily = stemText("Нового города пишут запросы");
+assert.equal(
+  renderStemmedText("Нового города пишут запросы", casedFamily),
+  "Нов город писа запрос",
+);
+// A hyphenated compound whose parts exist is looked up independently.
+assert.equal(stemText("текст-документ").words[0].match, "exact");
+
 console.log("lab 2 dictionary stemming tests passed ✓");
