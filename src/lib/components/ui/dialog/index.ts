@@ -11,25 +11,24 @@ import Root from "./dialog.svelte";
 
 export {
   Root,
-  Trigger,
+  Title,
   Portal,
+  Footer,
+  Header,
+  Trigger,
   Overlay,
   Content,
-  Header,
-  Footer,
-  Title,
   Description,
   Close,
-
   //
   Root as Dialog,
-  Trigger as DialogTrigger,
+  Title as DialogTitle,
   Portal as DialogPortal,
+  Footer as DialogFooter,
+  Header as DialogHeader,
+  Trigger as DialogTrigger,
   Overlay as DialogOverlay,
   Content as DialogContent,
-  Header as DialogHeader,
-  Footer as DialogFooter,
-  Title as DialogTitle,
   Description as DialogDescription,
   Close as DialogClose,
 };

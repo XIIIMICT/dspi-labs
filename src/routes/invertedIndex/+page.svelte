@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Alert, AlertDescription, AlertTitle } from '#lib/components/ui/alert';
 	import { Badge } from '#lib/components/ui/badge';
 	import { Button } from '#lib/components/ui/button';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card';
 	import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '#lib/components/ui/collapsible';
-	import { Input } from '#lib/components/ui/input';
+	import * as InputGroup from '#lib/components/ui/input-group';
 	import {
 		Table,
 		TableBody,
@@ -54,9 +55,9 @@
 	}
 </script>
 
-<div class="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-6">
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
 	<PageHeader
-		backHref="/"
+		backHref={resolve('/')}
 		title="Инвертированный индекс"
 		subtitle="Термины отсортированы по частоте в коллекции; раскройте термин, чтобы увидеть постинги"
 	/>
@@ -70,7 +71,7 @@
 				словарь терминов с постингами.
 			</AlertDescription>
 		</Alert>
-		<Button variant="outline" onclick={() => goBack('/')}>На главный экран</Button>
+		<Button variant="outline" onclick={() => goBack(resolve('/'))}>На главный экран</Button>
 	{:else}
 		<Card>
 			<CardHeader>
@@ -83,16 +84,18 @@
 					· показано: {shownTerms.length}
 				</CardDescription>
 			</CardHeader>
-			<CardContent class="space-y-4">
-				<div class="relative">
-					<SearchIcon class="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-					<Input
-						class="pl-9"
+			<CardContent class="flex flex-col gap-4">
+				<InputGroup.Root>
+					<InputGroup.Input
+						aria-label="Фильтр по термину"
 						placeholder="Фильтр по термину…"
 						bind:value={filter}
 						oninput={() => (limit = PAGE_SIZE)}
 					/>
-				</div>
+					<InputGroup.Addon>
+						<SearchIcon />
+					</InputGroup.Addon>
+				</InputGroup.Root>
 
 				<div class="overflow-hidden rounded-lg border">
 					{#each shownTerms as info (info.term)}

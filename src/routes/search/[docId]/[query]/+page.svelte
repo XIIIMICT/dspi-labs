@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Alert, AlertDescription, AlertTitle } from '#lib/components/ui/alert';
 	import { Button } from '#lib/components/ui/button';
 	import PageHeader from '#lib/components/page-header.svelte';
@@ -13,9 +14,9 @@
 	const doc = $derived(app.documents.find((d) => d.id === docId));
 </script>
 
-<div class="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-6">
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
 	<PageHeader
-		backHref="/"
+		backHref={resolve('/')}
 		title="Поиск «{query}»"
 		subtitle={doc ? `Документ: ${doc.name} (ID: ${doc.id})` : 'Документ не загружен'}
 	/>
@@ -33,6 +34,6 @@
 				загрузить заново на главном экране.
 			</AlertDescription>
 		</Alert>
-		<Button onclick={() => goto('/')}>На главный экран</Button>
+		<Button onclick={() => goto(resolve('/'))}>На главный экран</Button>
 	{/if}
 </div>

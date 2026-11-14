@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Alert, AlertDescription, AlertTitle } from '#lib/components/ui/alert';
 	import { Badge } from '#lib/components/ui/badge';
 	import { Button } from '#lib/components/ui/button';
@@ -40,10 +41,10 @@
 	let fileInput: HTMLInputElement | null = $state(null);
 	let dragOver = $state(false);
 
-	/** Документ, показываемый в modal/drawer просмотра. */
+	/** Document shown in the viewer modal/drawer. */
 	let viewDoc = $state<Document | null>(null);
 	let viewOpen = $state(false);
-	// const-зеркало viewDoc: так сужение типов в $derived и шаблоне работает стабильно
+	// A const mirror keeps narrowing stable in $derived and in the template.
 	const shownDoc = $derived(viewDoc);
 	const docWordCount = $derived(shownDoc ? findWords(shownDoc.rawText).length : 0);
 
@@ -62,13 +63,16 @@
 	}
 
 	function openSearchInDoc(docId: number): void {
-		goto(`/search/${docId}/${encodeURIComponent(app.searchQuery.trim())}`);
+		goto(resolve('/search/[docId]/[query]', {
+			docId: String(docId),
+			query: encodeURIComponent(app.searchQuery.trim()),
+		}));
 	}
 </script>
 
 <MainHeader />
 
-<div class="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-6">
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
 	<Card>
 		<CardHeader>
 			<CardTitle>Документы</CardTitle>
@@ -77,13 +81,13 @@
 				полностью в браузере.
 			</CardDescription>
 		</CardHeader>
-		<CardContent class="space-y-3">
+		<CardContent class="flex flex-col gap-3">
 			<div class="flex flex-wrap gap-2">
 				<Button onclick={() => fileInput?.click()} disabled={app.isProcessing}>
 					{#if app.isProcessing}
-						<LoaderCircleIcon class="animate-spin" />
+						<LoaderCircleIcon class="animate-spin" data-icon="inline-start" />
 					{:else}
-						<UploadIcon />
+						<UploadIcon data-icon="inline-start" />
 					{/if}
 					Выбрать файлы
 				</Button>
@@ -92,12 +96,12 @@
 					onclick={() => void app.loadDemoCollection()}
 					disabled={app.isProcessing}
 				>
-					<SparklesIcon />
+					<SparklesIcon data-icon="inline-start" />
 					Демо-тексты (100 документов)
 				</Button>
 				{#if app.documents.length > 0}
 					<Button variant="outline" onclick={() => app.reset()} disabled={app.isProcessing}>
-						<RotateCcwIcon />
+						<RotateCcwIcon data-icon="inline-start" />
 						Сбросить
 					</Button>
 				{/if}
@@ -112,11 +116,12 @@
 				onchange={onFilePick}
 			/>
 
-			<div
-				class="border-border/80 text-muted-foreground rounded-lg border-2 border-dashed p-6 text-center text-sm transition-colors"
+			<button
+				type="button"
+				class="border-border/80 text-muted-foreground hover:bg-muted/50 focus-visible:ring-ring/50 rounded-lg border-2 border-dashed p-6 text-center text-sm transition-colors focus-visible:ring-3 focus-visible:outline-none"
 				class:bg-muted={dragOver}
-				role="button"
-				tabindex="0"
+				aria-label="Выбрать или перетащить текстовые файлы"
+				onclick={() => fileInput?.click()}
 				ondragover={(event) => {
 					event.preventDefault();
 					dragOver = true;
@@ -125,7 +130,7 @@
 				ondrop={onDrop}
 			>
 				Перетащите текстовые файлы сюда
-			</div>
+			</button>
 
 			{#if app.documents.length > 0 || hasIndex}
 				<div class="flex flex-wrap gap-2">
@@ -145,9 +150,9 @@
 				слова, встречающиеся в документах.
 			</CardDescription>
 		</CardHeader>
-		<CardContent class="space-y-4">
+		<CardContent class="flex flex-col gap-4">
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
-				<div class="flex-1 space-y-1.5">
+				<div class="flex flex-1 flex-col gap-1.5">
 					<Label for="search-query">Введите слово для поиска</Label>
 					<Input
 						id="search-query"
@@ -162,13 +167,13 @@
 					onclick={() => app.showWordForms()}
 					disabled={app.documents.length === 0 || app.isProcessing}
 				>
-					<SearchIcon />
+					<SearchIcon data-icon="inline-start" />
 					Показать формы слова
 				</Button>
 			</div>
 
 			{#if app.foundForms.length > 0}
-				<div class="space-y-1.5">
+				<div class="flex flex-col gap-1.5">
 					<p class="text-sm font-medium">
 						Формы слова «{app.searchQuery.trim()}» (стем: {app.searchStem}):
 					</p>
@@ -182,7 +187,7 @@
 
 			{#if app.documents.length > 0}
 				<Separator />
-				<div class="space-y-2">
+				<div class="flex flex-col gap-2">
 					<p class="text-sm font-medium">
 						{#if app.foundForms.length > 0}
 							Документы:
@@ -246,10 +251,10 @@
 	<Button
 		class="w-full"
 		size="lg"
-		onclick={() => goto('/invertedIndex')}
+		onclick={() => goto(resolve('/invertedIndex'))}
 		disabled={!hasIndex || app.isProcessing}
 	>
-		<BookOpenIcon />
+		<BookOpenIcon data-icon="inline-start" />
 		Инвертированный индекс
 	</Button>
 

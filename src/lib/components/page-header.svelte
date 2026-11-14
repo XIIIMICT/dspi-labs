@@ -14,7 +14,7 @@
 <header class="flex flex-wrap items-center gap-x-3 gap-y-2">
 	{#if backHref}
 		<Button variant="outline" size="sm" onclick={() => goBack(backHref)}>
-			<ArrowLeftIcon />
+			<ArrowLeftIcon data-icon="inline-start" />
 			Назад
 		</Button>
 	{/if}

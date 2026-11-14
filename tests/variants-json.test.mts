@@ -1,6 +1,8 @@
 /**
- * Тест валидности variants.json всех лабораторных: структура словарей,
- * корректность полей и непересечение номеров вариантов в рамках одной лабы.
+ * Shared variants.json validation for all labs: parseable JSON, non-empty
+ * dictionaries, positive integer variant numbers with no overlaps within a
+ * lab, and a non-empty language string. Lab-specific fields are validated by
+ * each lab's own test (see tests/labs/).
  */
 
 import assert from "node:assert/strict";
@@ -10,8 +12,8 @@ import { fileURLToPath } from "node:url";
 
 interface LabVariantJson {
   variants: unknown;
-  вид: unknown;
   язык: unknown;
+  [key: string]: unknown;
 }
 
 const labsDir = fileURLToPath(new URL("../src/lib/labs", import.meta.url));
@@ -19,45 +21,50 @@ const labDirs = readdirSync(labsDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory() && entry.name.startsWith("lab-"))
   .map((entry) => entry.name);
 
-assert.ok(labDirs.length > 0, "в src/lib/labs должна быть хотя бы одна лабораторная");
+assert.ok(labDirs.length > 0, "at least one lab must exist in src/lib/labs");
 
 for (const lab of labDirs) {
-  const entries = JSON.parse(
-    readFileSync(join(labsDir, lab, "variants.json"), "utf8"),
-  ) as LabVariantJson[];
+  let entries: LabVariantJson[];
+  try {
+    entries = JSON.parse(
+      readFileSync(join(labsDir, lab, "variants.json"), "utf8"),
+    ) as LabVariantJson[];
+  } catch (error) {
+    assert.fail(`${lab}: variants.json is not valid JSON: ${String(error)}`);
+  }
 
-  assert.ok(Array.isArray(entries), `${lab}: корень файла — массив словарей`);
-  assert.ok(entries.length > 0, `${lab}: массив словарей не пуст`);
+  assert.ok(Array.isArray(entries), `${lab}: root must be an array of dictionaries`);
+  assert.ok(entries.length > 0, `${lab}: dictionaries array must not be empty`);
 
   const seen = new Set<number>();
   for (const [i, entry] of entries.entries()) {
     const prefix = `${lab}[${i}]`;
-    assert.ok(Array.isArray(entry.variants), `${prefix}: поле variants — массив номеров`);
-    assert.ok(entry.variants.length > 0, `${prefix}: variants не пуст`);
+    assert.ok(
+      entry !== null && typeof entry === "object" && !Array.isArray(entry),
+      `${prefix}: must be an object`,
+    );
+    assert.ok(Array.isArray(entry.variants), `${prefix}: variants must be an array of numbers`);
+    assert.ok(entry.variants.length > 0, `${prefix}: variants must not be empty`);
     for (const n of entry.variants) {
       assert.ok(
         typeof n === "number" && Number.isInteger(n) && n > 0,
-        `${prefix}: номер варианта ${String(n)} — целое число > 0`,
+        `${prefix}: variant ${String(n)} must be a positive integer`,
       );
       assert.ok(
         !seen.has(n),
-        `${prefix}: вариант ${n} указан повторно — variants словарей одной лабы не должны пересекаться`,
+        `${prefix}: variant ${n} is duplicated — variant sets must not overlap within a lab`,
       );
       seen.add(n);
     }
     assert.ok(
-      typeof entry.вид === "string" && entry.вид.trim() !== "",
-      `${prefix}: вид — непустая строка`,
-    );
-    assert.ok(
       typeof entry.язык === "string" && entry.язык.trim() !== "",
-      `${prefix}: язык — непустая строка`,
+      `${prefix}: language must be a non-empty string`,
     );
   }
 
   console.log(
-    `${lab}: ${entries.length} словарей, варианты ${[...seen].sort((a, b) => a - b).join(", ")}`,
+    `${lab}: ${entries.length} dictionaries, variants ${[...seen].sort((a, b) => a - b).join(", ")}`,
   );
 }
 
-console.log("variants.json всех лабораторных валиден ✓");
+console.log("shared variants.json validation passed ✓");

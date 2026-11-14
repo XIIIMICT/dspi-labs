@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Alert, AlertDescription, AlertTitle } from '#lib/components/ui/alert';
 	import { Badge } from '#lib/components/ui/badge';
 	import { Button } from '#lib/components/ui/button';
@@ -15,8 +16,8 @@
 	const wordCount = $derived(doc ? findWords(doc.rawText).length : 0);
 </script>
 
-<div class="mx-auto w-full max-w-4xl space-y-4 p-4 sm:p-6">
-	<PageHeader backHref="/" title={doc ? `Документ: ${doc.name}` : 'Документ'} />
+<div class="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
+	<PageHeader backHref={resolve('/')} title={doc ? `Документ: ${doc.name}` : 'Документ'} />
 
 	{#if doc}
 		<div class="flex flex-wrap gap-2">
@@ -42,6 +43,6 @@
 				загрузите документы заново.
 			</AlertDescription>
 		</Alert>
-		<Button onclick={() => goto('/')}>На главный экран</Button>
+		<Button onclick={() => goto(resolve('/'))}>На главный экран</Button>
 	{/if}
 </div>

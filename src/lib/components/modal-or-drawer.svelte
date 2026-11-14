@@ -18,7 +18,8 @@
 		children: Snippet;
 	} = $props();
 
-	/** Ниже sm (640px) показываем drawer снизу, на остальных экранах — modal по центру. */
+	// Bottom drawer below the `sm` breakpoint, centered dialog above it
+	// (the responsive Dialog/Drawer pattern from the shadcn-svelte docs).
 	const isMobile = new MediaQuery('(max-width: 639.98px)');
 </script>
 
@@ -44,7 +45,7 @@
 {:else}
 	<Dialog.Root bind:open>
 		<Dialog.Content class="flex max-h-[85vh] flex-col sm:max-w-3xl">
-			<Dialog.Header class="shrink-0">
+			<Dialog.Header class="shrink-0 text-left">
 				<Dialog.Title class="truncate pr-8">{title}</Dialog.Title>
 				{#if description}
 					<Dialog.Description>{description}</Dialog.Description>
@@ -53,7 +54,7 @@
 					<div class="mt-2 flex flex-wrap gap-1.5">{@render badges()}</div>
 				{/if}
 			</Dialog.Header>
-			<div class="min-h-0 flex-1 overflow-y-auto">
+			<div class="-mx-4 min-h-0 flex-1 overflow-y-auto px-4">
 				{@render children()}
 			</div>
 		</Dialog.Content>

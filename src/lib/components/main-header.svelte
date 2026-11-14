@@ -6,9 +6,15 @@
 	import { Tabs, TabsList, TabsTrigger } from '#lib/components/ui/tabs';
 	import ThemeToggle from './theme-toggle.svelte';
 	import { getVariantInfo, getVariantNumbers, labs } from '#lib/labs';
-	import { marked } from 'marked';
+	import { marked, Renderer } from 'marked';
 
 	const LAB_NUMBERS = [1, 2, 3, 4];
+
+	// Assignment Markdown ships with the repo and contains no HTML; escape any
+	// raw HTML tokens so {@html} can never execute markup from the MD file.
+	const assignmentRenderer = new Renderer();
+	assignmentRenderer.html = ({ text }) =>
+		text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 	let activeLab = $state('1');
 	let variant = $state('8');
@@ -17,7 +23,7 @@
 	const lab = $derived(labs.find((l) => String(l.number) === activeLab) ?? labs[0]);
 	const variantNumbers = $derived(getVariantNumbers(lab));
 	const variantInfo = $derived(getVariantInfo(lab, Number(variant)));
-	const assignmentHtml = $derived(marked.parse(lab.assignment) as string);
+	const assignmentHtml = $derived(marked.parse(lab.assignment, { renderer: assignmentRenderer }) as string);
 </script>
 
 <header class="sticky top-0 z-10 border-b border-foreground/10 bg-background">
@@ -29,7 +35,8 @@
 			</h1>
 			<ThemeToggle />
 		</div>
-		<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:justify-start">
+		<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+			<Button size="sm" onclick={() => (assignmentOpen = true)}>Задание</Button>
 			<Tabs bind:value={activeLab}>
 				<TabsList>
 					{#each LAB_NUMBERS as labNumber (labNumber)}
@@ -44,7 +51,6 @@
 					{/each}
 				</TabsList>
 			</Tabs>
-			<Button size="sm" onclick={() => (assignmentOpen = true)}>Задание</Button>
 			<Select.Root type="single" bind:value={variant}>
 				<Select.Trigger class="w-32">Вариант {variant}</Select.Trigger>
 				<Select.Content>
@@ -68,7 +74,7 @@
 			<Badge variant="secondary">Вид: {variantInfo?.вид ?? '—'}</Badge>
 			<Badge variant="secondary">Язык: {variantInfo?.язык ?? '—'}</Badge>
 		{/snippet}
-		<!-- markdown-контент задания из assignment.md лабораторной -->
+		<!-- Assignment Markdown from the lab's assignment.md, rendered as sanitized HTML -->
 		<div class="prose prose-sm dark:prose-invert max-w-none">
 			{@html assignmentHtml}
 		</div>
