@@ -45,9 +45,11 @@
 		</CardTitle>
 		<CardDescription>
 			Вариант {shellStore.selectedVariant}. Требуется ровно {REQUIRED_TEXTS} текста по
-			{MIN_WORDS_PER_TEXT}+ латинских токенов (язык по варианту — английский): канонизация (стоп-слова, знаки, теги, сингуляризация
-			существительных) → шинглы по {shingleWidth} слов → {HASH_FUNCTION_COUNT} хэш-функций
-			{hashAlgorithm} → минимальные контрольные суммы → сравнение.
+			{MIN_WORDS_PER_TEXT}+ латинских токенов (язык по варианту — английский): канонизация
+			(стоп-слова, знаки, теги, приведение известных форм множественного числа
+			существительных к единственному числу) → шинглы по {shingleWidth} слов →
+			{HASH_FUNCTION_COUNT} хэш-функций {hashAlgorithm} → минимальные контрольные суммы →
+			сравнение.
 		</CardDescription>
 	</CardHeader>
 	<CardContent class="flex flex-col gap-3">

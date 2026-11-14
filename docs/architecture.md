@@ -117,13 +117,16 @@ Variant 2/8/14: SHA-1, 8-word shingles, English texts. The manual's pipeline:
 
 1. **Canonicalization** — lowercase, English letters only, HTML-like tags and
    digits as separators, stop words (the manual's «вспомогательные единицы»)
-   removed, plus conservative offline singularization of KNOWN plural nouns
-   (a `Map` of irregular forms + guarded regular candidates confirmed against
-   a local singular list). The manual's requirement is stated in Russian
-   morphological terms («приведение имен существительных в именительный
-   падеж, единственное число»); for English this is a documented
-   approximation, NOT full морфологическая лемматизация с определением части
-   речи (POS-aware lemmatization). Common singular/non-noun words and inherited
+   removed, plus a LIMITED offline approximation of noun singularization
+   (a `Map` of unambiguous irregular forms + guarded regular candidates
+   confirmed against a local singular list). Coverage is exactly those entries;
+   ambiguous forms are left unchanged: `bases` (plural of `base` or `basis`)
+   and `data` (commonly a mass/singular technical noun). The manual's
+   requirement is stated in Russian morphological terms («приведение имен
+   существительных в именительный падеж, единственное число»); for English
+   this is a documented approximation, NOT full noun lemmatization / full
+   морфологическая лемматизация с определением части речи (POS-aware
+   lemmatization). Common singular/non-noun words and inherited
    object properties are preserved. Root reduction («иногда») is deliberately
    not applied. The source text is never mutated. Latin-letter token counting
    is a quantity check, NOT a language detector.

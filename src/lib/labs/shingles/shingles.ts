@@ -4,12 +4,14 @@
  *
  * Manual (Методичка, ЛР 3, «Методические указания») pipeline, in order:
  *   1) канонизация — lowercase, strip punctuation/tags/digits, remove
- *      auxiliary words (prepositions/conjunctions — stop words), and bring
- *      known plural nouns to a singular base form. The manual describes this
- *      stage in Russian morphological terms; for English this is a documented
- *      conservative offline approximation: a `Map` of irregular plurals plus
- *      guarded regular candidates confirmed against a local singular list.
- *      It is NOT POS-aware lemmatization, and root reduction («иногда»)
+ *      auxiliary words (prepositions/conjunctions — stop words), and bring a
+ *      LIMITED set of unambiguous known plural nouns to a singular base form.
+ *      The manual describes this stage in Russian morphological terms; for
+ *      English this is a documented conservative offline approximation: a
+ *      `Map` of unambiguous irregular plurals plus guarded regular candidates
+ *      confirmed against a local singular list. Ambiguous forms (`bases`,
+ *      `data`) are left unchanged because there is no POS/context analysis.
+ *      It is NOT full noun lemmatization, and root reduction («иногда»)
  *      remains an optional, deliberately unused step.
  *   2) разбиение на шинглы — overlapping sequences of W consecutive canonical
  *      tokens («внахлест»), count = tokens − W + 1;
@@ -121,19 +123,27 @@ const STOP_WORDS = new Set([
 ]);
 
 /**
- * Deterministic, offline, conservative English singularization — NOT
- * POS-aware lemmatization and NOT a language detector.
+ * Deterministic, offline, conservative English singularization. This is a
+ * LIMITED approximation, NOT full noun lemmatization, NOT POS-aware analysis,
+ * and NOT a language detector.
  *
  * Blanket `-s` stripping corrupts ordinary words (`news → new`,
  * `series → sery`, `always → alway`), so suffix rules only GENERATE a
  * candidate. A candidate is accepted only when it is present in
  * `KNOWN_SINGULARS` (a local offline list); every other token is returned
  * unchanged. Irregular forms live in a `Map` so inherited object properties
- * (`constructor`, `toString`) can never leak a function into canonical output.
- * Scope and limitations are documented in `docs/requirements-matrix.md`.
+ * (`constructor`, `toString`) can never leak a function into canonical output,
+ * and ambiguous mappings (`bases`, `data`) are intentionally excluded.
+ * Actual coverage is exactly the entries below plus the confirmed candidates;
+ * see `docs/requirements-matrix.md`.
  */
 
-/** Irregular plural → singular (prototype-safe: no object property lookup). */
+/** Irregular plural → singular (prototype-safe: no object property lookup).
+ * Ambiguous forms are deliberately ABSENT: `bases` can be the plural of
+ * `base` or `basis`, and `data` is commonly a mass/singular noun in technical
+ * English. Without POS context the conservative choice is to leave them
+ * unchanged rather than guess. Scope is documented in requirements-matrix.md.
+ */
 const IRREGULAR_PLURALS = new Map<string, string>([
   ["children", "child"],
   ["men", "man"],
@@ -144,11 +154,9 @@ const IRREGULAR_PLURALS = new Map<string, string>([
   ["geese", "goose"],
   ["mice", "mouse"],
   ["oxen", "ox"],
-  ["data", "datum"],
   ["indices", "index"],
   ["matrices", "matrix"],
   ["analyses", "analysis"],
-  ["bases", "basis"],
   ["crises", "crisis"],
   ["phenomena", "phenomenon"],
 ]);
@@ -161,7 +169,6 @@ const IRREGULAR_PLURALS = new Map<string, string>([
 const KNOWN_SINGULARS = new Set<string>([
   "analysis",
   "author",
-  "basis",
   "block",
   "box",
   "cat",
@@ -173,7 +180,6 @@ const KNOWN_SINGULARS = new Set<string>([
   "component",
   "computer",
   "crisis",
-  "datum",
   "day",
   "document",
   "dog",

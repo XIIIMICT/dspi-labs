@@ -47,6 +47,19 @@ assert.equal(singularize("children"), "child");
 assert.equal(singularize("men"), "man");
 assert.equal(singularize("indices"), "index");
 assert.equal(singularize("mice"), "mouse");
+// --- Ambiguous forms are left unchanged (no POS/context analysis) ---
+// "bases" can be the plural of "base" OR "basis"; "data" is commonly a
+// mass/singular noun in technical English. Neither is mapped to a singular.
+for (const word of ["bases", "base", "basis", "data", "datum", "databases"]) {
+  assert.equal(singularize(word), word, `${word} is ambiguous and must be preserved`);
+}
+assert.deepEqual(canonicalize("bases data bases"), ["bases", "data", "bases"]);
+assert.deepEqual(canonicalize("the bases of the data"), ["bases", "data"]);
+// Unambiguous irregulars still normalize (the exclusions are narrow).
+assert.equal(singularize("indices"), "index");
+assert.equal(singularize("analyses"), "analysis");
+assert.equal(singularize("crises"), "crisis");
+
 // Blanket suffix stripping would corrupt these ordinary words.
 for (const word of [
   "news",
