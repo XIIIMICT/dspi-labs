@@ -159,49 +159,74 @@ const IRREGULAR_PLURALS = new Map<string, string>([
   ["analyses", "analysis"],
   ["crises", "crisis"],
   ["phenomena", "phenomenon"],
+  ["criteria", "criterion"],
+  ["wolves", "wolf"],
+  ["leaves", "leaf"],
+  ["knives", "knife"],
+  ["lives", "life"],
+  ["wives", "wife"],
 ]);
 
 /**
  * Local offline list of base noun forms. A generated singular candidate is
  * accepted only if it appears here; this is the guard that keeps `news`,
  * `series`, `species`, `physics`, `always`, `various`, and `alias` intact.
+ * Coverage is a hand-curated educational set of common technical/general
+ * nouns — deliberately finite, NOT a full English lexicon (no POS analysis).
  */
 const KNOWN_SINGULARS = new Set<string>([
   "analysis",
+  "algorithm",
   "author",
+  "batch",
   "block",
+  "book",
   "box",
+  "business",
   "cat",
+  "category",
   "child",
   "city",
   "class",
+  "cluster",
   "collection",
   "company",
   "component",
   "computer",
+  "country",
   "crisis",
+  "criterion",
+  "database",
+  "dataset",
   "day",
   "document",
   "dog",
   "element",
   "engine",
+  "entry",
   "error",
   "event",
   "file",
   "form",
   "fox",
   "function",
+  "glass",
   "group",
   "hash",
   "hero",
   "index",
+  "knife",
+  "leaf",
+  "life",
   "line",
   "list",
   "man",
   "matrix",
+  "match",
   "method",
   "model",
   "mouse",
+  "network",
   "node",
   "number",
   "object",
@@ -210,6 +235,7 @@ const KNOWN_SINGULARS = new Set<string>([
   "page",
   "pair",
   "part",
+  "party",
   "person",
   "phrase",
   "point",
@@ -217,6 +243,7 @@ const KNOWN_SINGULARS = new Set<string>([
   "potato",
   "process",
   "program",
+  "quality",
   "query",
   "record",
   "request",
@@ -230,6 +257,7 @@ const KNOWN_SINGULARS = new Set<string>([
   "set",
   "shingle",
   "source",
+  "story",
   "string",
   "structure",
   "system",
@@ -243,6 +271,9 @@ const KNOWN_SINGULARS = new Set<string>([
   "tree",
   "user",
   "value",
+  "vector",
+  "wife",
+  "wolf",
   "word",
   "worker",
 ]);
@@ -290,6 +321,12 @@ export function singularize(token: string): string {
  * Canonical tokens: lowercase English letter sequences, stop words removed,
  * common plural nouns brought to a singular base form. HTML-like tags and
  * digits act as separators; the original source text is never mutated.
+ *
+ * Deliberately NOT implemented (both optional in the manual): adjective
+ * removal («часто предполагается») and root reduction («иногда»). Without
+ * POS analysis, dropping adjectives would change shingle content and risk
+ * over-normalization; this stage keeps every non-stop-word token.
+ * See `docs/requirements-matrix.md`.
  */
 export function canonicalize(text: string): string[] {
   const tokens: string[] = [];

@@ -1,6 +1,7 @@
 /**
- * Lab 3 (shingles) tests: canonicalization (including conservative English
- * singularization), 8-word overlapping shingles, SHA-1 and salted-hash
+ * Lab 3 (shingles) tests: canonicalization (including expanded but still
+ * conservative English singularization and deliberately omitted adjective
+ * removal / root reduction), 8-word overlapping shingles, SHA-1 and salted-hash
  * known-answer vectors, the 84 control-sum construction, empty-sketch
  * rejection, and pairwise similarity for identical / disjoint / partially
  * overlapping texts.
@@ -47,10 +48,79 @@ assert.equal(singularize("children"), "child");
 assert.equal(singularize("men"), "man");
 assert.equal(singularize("indices"), "index");
 assert.equal(singularize("mice"), "mouse");
+// --- Expanded but still conservative: every generated candidate must be
+// confirmed against the local list; ambiguous/ordinary words stay intact ---
+for (const [plural, singular] of [
+  ["wolves", "wolf"],
+  ["leaves", "leaf"],
+  ["knives", "knife"],
+  ["lives", "life"],
+  ["wives", "wife"],
+  ["potatoes", "potato"],
+  ["heroes", "hero"],
+  ["criteria", "criterion"],
+  ["phenomena", "phenomenon"],
+  ["matches", "match"],
+  ["batches", "batch"],
+  ["glasses", "glass"],
+  ["businesses", "business"],
+  ["stories", "story"],
+  ["countries", "country"],
+  ["parties", "party"],
+  ["qualities", "quality"],
+  ["categories", "category"],
+  ["entries", "entry"],
+  ["databases", "database"],
+  ["datasets", "dataset"],
+  ["algorithms", "algorithm"],
+  ["vectors", "vector"],
+  ["clusters", "cluster"],
+  ["networks", "network"],
+  ["books", "book"],
+]) {
+  assert.equal(singularize(plural), singular, `${plural} must normalize to ${singular}`);
+}
+assert.deepEqual(canonicalize("the wolves and leaves in the glasses of businesses"), [
+  "wolf",
+  "leaf",
+  "glass",
+  "business",
+]);
+// Negative cases: singular bases, ambiguous forms, and ordinary words must not
+// change even with the wider list (no blanket -s stripping).
+for (const word of [
+  "wolf",
+  "leaf",
+  "glass",
+  "business",
+  "story",
+  "criterion",
+  "bases",
+  "base",
+  "basis",
+  "data",
+  "datum",
+  "news",
+  "series",
+  "species",
+  "physics",
+  "always",
+  "various",
+  "alias",
+  "bus",
+  "class",
+  "analysis",
+  "this",
+]) {
+  assert.equal(singularize(word), word, `${word} must not change`);
+}
+
 // --- Ambiguous forms are left unchanged (no POS/context analysis) ---
 // "bases" can be the plural of "base" OR "basis"; "data" is commonly a
 // mass/singular noun in technical English. Neither is mapped to a singular.
-for (const word of ["bases", "base", "basis", "data", "datum", "databases"]) {
+// ("databases" is NOT ambiguous: it is now a confirmed regular plural →
+// "database", covered in the expanded-family block above.)
+for (const word of ["bases", "base", "basis", "data", "datum"]) {
   assert.equal(singularize(word), word, `${word} is ambiguous and must be preserved`);
 }
 assert.deepEqual(canonicalize("bases data bases"), ["bases", "data", "bases"]);

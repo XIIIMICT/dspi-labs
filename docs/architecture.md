@@ -122,18 +122,22 @@ Variant 2/8/14: SHA-1, 8-word shingles, English texts. The manual's pipeline:
 1. **Canonicalization** — lowercase, English letters only, HTML-like tags and
    digits as separators, stop words (the manual's «вспомогательные единицы»)
    removed, plus a LIMITED offline approximation of noun singularization
-   (a `Map` of unambiguous irregular forms + guarded regular candidates
-   confirmed against a local singular list). Coverage is exactly those entries;
+   (a `Map` of unambiguous irregular forms — including `wolves`/`leaves`/
+   `criteria` families — + guarded regular candidates confirmed against a
+   local singular list, extended with common technical/general noun families).
+   Still no blanket `-s` stripping. Coverage is exactly those entries;
    ambiguous forms are left unchanged: `bases` (plural of `base` or `basis`)
    and `data` (commonly a mass/singular technical noun). The manual's
    requirement is stated in Russian morphological terms («приведение имен
    существительных в именительный падеж, единственное число»); for English
    this is a documented approximation, NOT full noun lemmatization / full
    морфологическая лемматизация с определением части речи (POS-aware
-   lemmatization). Common singular/non-noun words and inherited
-   object properties are preserved. Root reduction («иногда») is deliberately
-   not applied. The source text is never mutated. Latin-letter token counting
-   is a quantity check, NOT a language detector.
+   lemmatization). Adjective removal («часто предполагается») and root
+   reduction («иногда») are DELIBERATELY NOT implemented — both are optional
+   in the manual and would change shingle content / risk over-normalization
+   without POS analysis. Common singular/non-noun words and inherited
+   object properties are preserved. The source text is never mutated.
+   Latin-letter token counting is a quantity check, NOT a language detector.
 2. **Shingling** — overlapping (`внахлест`) sequences of W canonical tokens;
    count = tokens − W + 1.
 3. **Hashing** — 84 static hash functions: SHA-1 of `${salt}:${shingleText}`
