@@ -8,20 +8,15 @@
 	import { shellStore } from '#lib/shell.svelte';
 	import { getVariantFields, getVariantInfo, getVariantNumbers, labs } from '#lib/labs';
 
-	let variant = $state('8');
 	let assignmentOpen = $state(false);
 
+	// Variant selection lives in the shared shell store so lab views can read
+	// the same value the header displays (keyed per lab, validated on switch).
+	const variant = $derived(String(shellStore.selectedVariant));
 	const lab = $derived(labs.find((l) => String(l.number) === shellStore.activeLab) ?? labs[0]);
 	const variantNumbers = $derived(getVariantNumbers(lab));
 	const variantInfo = $derived(getVariantInfo(lab, Number(variant)));
 	const variantFields = $derived(getVariantFields(variantInfo));
-
-	// Keep the selected variant valid when switching to a lab with a different set.
-	$effect(() => {
-		if (variantNumbers.length > 0 && !variantNumbers.includes(Number(variant))) {
-			variant = String(variantNumbers[0]);
-		}
-	});
 </script>
 
 <header class="sticky top-0 z-10 border-b border-foreground/10 bg-background">
@@ -49,7 +44,11 @@
 					{/each}
 				</TabsList>
 			</Tabs>
-			<Select.Root type="single" bind:value={variant}>
+			<Select.Root
+				type="single"
+				value={variant}
+				onValueChange={(value: string) => shellStore.selectVariant(Number(value))}
+			>
 				<Select.Trigger class="w-32">Вариант {variant}</Select.Trigger>
 				<Select.Content>
 					<Select.Group>
