@@ -6,6 +6,7 @@
  */
 
 import assert from "node:assert/strict";
+import { stemDictionary } from "../../src/lib/labs/stemming/dictionary.ts";
 import {
   countWords,
   findTokenSpans,
@@ -98,5 +99,30 @@ assert.equal(
   renderStemmedText("документ ксилофоном индекс", withMisses),
   "документ ксилофоном индекс",
 );
+
+// --- Dictionary asset invariants: plain single lowercase Russian words only ---
+// Guards against tokenizer-unreachable keys (spaces) and stress-marked
+// entries (U+0301 combining accent) that would never match or render garbage.
+const singleWordPattern = /^[а-яё]+(?:-[а-яё]+)*$/;
+for (const [key, value] of Object.entries(stemDictionary.entries)) {
+  assert.match(key, singleWordPattern, `dictionary key must be a plain single word: ${key}`);
+  assert.match(
+    value,
+    singleWordPattern,
+    `dictionary stem must be a plain word: ${key} -> ${value}`,
+  );
+}
+
+// The former dead keys now behave as ordinary single-word lookups.
+assert.deepEqual(lookupStem("людях"), {
+  source: "людях",
+  lookup: "людях",
+  stem: "человек",
+  match: "exact",
+});
+assert.equal(lookupStem("сравнение").stem, "сравнен");
+assert.equal(lookupStem("числах").stem, "числ");
+// Stress-marked value removed: the stem renders without combining accents.
+assert.equal(lookupStem("выть").stem, "вы");
 
 console.log("lab 2 dictionary stemming tests passed ✓");
