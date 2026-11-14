@@ -21,16 +21,22 @@ const positiveInt: FieldCheck = (value, prefix) =>
     `${prefix}: must be a positive integer`,
   );
 
+/** Looks up a field case-insensitively so key capitalization stays a data concern. */
+function fieldValue(entry: Record<string, unknown>, field: string): unknown {
+  const key = Object.keys(entry).find((k) => k.toLowerCase() === field.toLowerCase());
+  return key === undefined ? undefined : entry[key];
+}
+
 const schemas: Record<string, Record<string, FieldCheck>> = {
-  "Инвертированный индекс и словарь": { вид: nonEmptyString },
-  "Стемминг и лемматизация": { алгоритм: nonEmptyString, вид: nonEmptyString },
+  "Инвертированный индекс и словарь": { Вид: nonEmptyString },
+  "Стемминг и лемматизация": { Алгоритм: nonEmptyString, Вид: nonEmptyString },
   "Сравнение текстов с помощью алгоритма шинглов": {
-    "алгоритм хэширования": nonEmptyString,
-    "слов в шинглах": positiveInt,
+    "Алгоритм хэширования": nonEmptyString,
+    "Слов в шинглах": positiveInt,
   },
   "Оценка качества поиска": {
-    "алгоритм хэширования": nonEmptyString,
-    "слов в шинглах": positiveInt,
+    "Алгоритм хэширования": nonEmptyString,
+    "Слов в шинглах": positiveInt,
   },
 };
 
@@ -45,7 +51,7 @@ for (const lab of registry) {
   assert.ok(schema, `no lab-specific schema defined for "${lab.title}"`);
   for (const [i, entry] of lab.variants.entries()) {
     for (const [field, check] of Object.entries(schema)) {
-      check(entry[field], `${lab.title}.variants[${i}].${field}`);
+      check(fieldValue(entry, field), `${lab.title}.variants[${i}].${field}`);
     }
   }
   console.log(`${lab.title}: lab-specific fields validated ✓`);

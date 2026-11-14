@@ -11,7 +11,6 @@ import { fileURLToPath } from "node:url";
 
 interface LabVariantJson {
   variants: unknown;
-  язык: unknown;
   [key: string]: unknown;
 }
 
@@ -68,8 +67,11 @@ for (const [labIndex, lab] of registry.entries()) {
       );
       seen.add(n);
     }
+    const languageKey = Object.keys(entry).find((key) => key.toLowerCase() === "язык");
     assert.ok(
-      typeof entry.язык === "string" && entry.язык.trim() !== "",
+      languageKey !== undefined &&
+        typeof entry[languageKey] === "string" &&
+        (entry[languageKey] as string).trim() !== "",
       `${vprefix}: language must be a non-empty string`,
     );
   }

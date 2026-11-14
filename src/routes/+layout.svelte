@@ -21,7 +21,7 @@
 <ModeWatcher />
 
 <div class="flex min-h-svh flex-col bg-background text-foreground">
-	<main class="flex-1">
+	<main class="flex flex-1 flex-col">
 		{@render children()}
 	</main>
 	<MainFooter />

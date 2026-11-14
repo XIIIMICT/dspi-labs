@@ -298,7 +298,9 @@
 	</ModalOrDrawer>
 	</div>
 {:else}
-	<p class="flex min-h-[60svh] items-center justify-center px-4 text-center text-lg text-muted-foreground">
+	<p
+		class="text-muted-foreground flex flex-1 items-center justify-center px-4 text-center text-lg"
+	>
 		Эта лабораторная работа ещё не реализована
 	</p>
 {/if}
