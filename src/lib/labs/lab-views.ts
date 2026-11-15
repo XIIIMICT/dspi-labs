@@ -10,7 +10,7 @@
 
 import type { Component } from "svelte";
 
-import Lab1View from "./inverted-index/lab1-view.svelte";
+import Lab1View from "./inverted-index/view.svelte";
 import Lab2View from "./stemming/view.svelte";
 import Lab3View from "./shingles/view.svelte";
 import Lab4View from "./search-quality/view.svelte";

@@ -16,8 +16,8 @@ import { generateDemoCollection } from "./demo-texts";
 import type { Document, DocumentSource, TermInfo } from "./models";
 import { findWordForms, stem, tokenizeAndNormalize } from "./text-processing";
 
-/** The log keeps at most this many lines (the original showed the last 200). */
-const MAX_LOG_ENTRIES = 500;
+/** The log keeps at most this many lines (the original showed the last 1000). */
+const MAX_LOG_ENTRIES = 1000;
 
 class AppStore {
   /** Loaded documents (`documents` in MainActivity). */
@@ -100,7 +100,6 @@ class AppStore {
       const docs: Document[] = loaded.map((item, i) => ({
         id: i + 1,
         name: item.name,
-        path: item.path,
         rawText: item.rawText,
       }));
 

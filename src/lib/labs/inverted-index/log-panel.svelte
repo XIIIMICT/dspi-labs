@@ -3,13 +3,13 @@
 	import { ScrollArea } from '#lib/components/ui/scroll-area';
 	import { appStore as app } from './store.svelte';
 
-	const logLines = $derived(app.logs.slice(-200));
+	const logLines = $derived(app.logs.slice(-1000));
 </script>
 
 <Card>
 	<CardHeader>
 		<CardTitle>Логи</CardTitle>
-		<CardDescription>Последние 200 сообщений журнала обработки.</CardDescription>
+		<CardDescription>Последние 1000 сообщений журнала обработки.</CardDescription>
 	</CardHeader>
 	<CardContent>
 		{#if app.logs.length === 0}

@@ -14,6 +14,14 @@
   }
   html {
     @apply font-sans;
+    /* No page scrollbar: bits-ui compensates its width when locking body for
+       dialogs, which shifted the layout on open. With no bar the measured
+       width is 0 and no padding compensation is applied. Scrolling still
+       works; inner scroll areas (TextArea, modal body) keep their own bars. */
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar {
+    display: none;
   }
 }
 

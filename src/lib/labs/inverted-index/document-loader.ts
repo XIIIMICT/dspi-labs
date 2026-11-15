@@ -2,7 +2,8 @@
  * Document loading — port of `data/DocumentLoader.kt`.
  * The Android version opened files through `contentResolver` by `Uri`;
  * here text is read from `File` objects (picker or drag-and-drop) or from
- * built-in demo texts. Collection-level contract validation lives in
+ * built-in demo texts. Browsers do not expose a full local path, so only the
+ * display name is retained. Collection-level contract validation lives in
  * `collection-validation.ts` and runs in the store before replacing state.
  */
 
@@ -17,9 +18,6 @@ export function sourcesFromFiles(files: File[]): DocumentSource[] {
     .filter((file) => isSupportedTextFile(file.name, file.type))
     .map((file) => ({
       name: file.name,
-      // Browsers do not expose a full local path; a folder selection provides
-      // the relative `webkitRelativePath` instead.
-      path: (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name,
       read: () => file.text(),
     }));
 }
@@ -39,13 +37,13 @@ export function unsupportedFileNames(files: File[]): string[] {
 export async function loadFromSources(
   sources: DocumentSource[],
   emitStep: ((message: string) => void) | null = null,
-): Promise<Array<{ name: string; path: string; rawText: string }>> {
-  const docs: Array<{ name: string; path: string; rawText: string }> = [];
+): Promise<Array<{ name: string; rawText: string }>> {
+  const docs: Array<{ name: string; rawText: string }> = [];
 
   for (const source of sources) {
     try {
       const content = await source.read();
-      docs.push({ name: source.name, path: source.path, rawText: content });
+      docs.push({ name: source.name, rawText: content });
       emitStep?.(`Загружен документ: ${source.name}`);
     } catch (error) {
       const message = `Ошибка при чтении файла ${source.name}: ${error instanceof Error ? error.message : String(error)}`;

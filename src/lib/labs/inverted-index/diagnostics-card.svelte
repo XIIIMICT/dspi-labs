@@ -2,9 +2,18 @@
 	import { Badge } from '#lib/components/ui/badge';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card';
 	import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '#lib/components/ui/collapsible';
+	import { Textarea } from '#lib/components/ui/textarea';
 	import { appStore as app } from './store.svelte';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+
+	/** Full, untruncated repeat evidence: one document per block, terms as a
+	 * "- term" list, blank line between documents. */
+	const repeatsText = $derived(
+		(app.diagnostics?.repeatedWithinDocuments ?? [])
+			.map((item) => `${item.name}:\n${item.terms.map((term) => `- ${term}`).join('\n')}`)
+			.join('\n\n'),
+	);
 </script>
 
 {#if app.diagnostics}
@@ -37,13 +46,13 @@
 					Повторы внутри документов ({app.diagnostics.repeatedWithinDocuments.length} документов)
 				</CollapsibleTrigger>
 				<CollapsibleContent>
-					<div class="mt-2 max-h-48 overflow-auto rounded-md border p-2 font-mono text-xs">
-						{#each app.diagnostics.repeatedWithinDocuments.slice(0, 10) as item (item.name)}
-							<div class="truncate">
-								{item.name}: {item.terms.slice(0, 15).join(', ')}
-							</div>
-						{/each}
-					</div>
+					<Textarea
+						value={repeatsText}
+						readonly
+						rows={8}
+						class="mt-2 font-mono !text-xs leading-relaxed whitespace-pre-wrap"
+						aria-label="Повторы внутри документов"
+					/>
 				</CollapsibleContent>
 			</Collapsible>
 		</CardContent>

@@ -45,6 +45,25 @@ src/lib/labs/
   `shellStore.selectedVariant` and writes through `shellStore.selectVariant` —
   there is no duplicated source of truth, and lab views consume the same value.
 
+## View composition
+
+Every lab exposes `view.svelte` as a thin orchestrator (Lab 1 was renamed
+from `lab1-view.svelte` for consistency). Each screen starts with a card whose
+`CardTitle` shows the lab icon + registry title; `CardDescription` is a short
+«what to enter» hint only — the full assignment and variant metadata live in
+the shared «Задание» dialog, never duplicated on screen.
+
+Larger labs are decomposed into cohesive sibling components that read their
+lab store directly (no props/context layer):
+
+- Lab 1: `documents-panel`, `search-card`, `diagnostics-card`, `log-panel`,
+  `document-modal` (+ `view-state.svelte.ts` for the shared viewer state).
+- Lab 3: `input-card`, `similarity-card`, `source-texts-card`, `evidence-card`.
+- Lab 4: `input-card`, `results-table-card`, `chart-card`, `samples-card`,
+  `conclusions-card`.
+- Lab 2 stays a single `view.svelte` (small enough; maintained as the pattern
+  reference).
+
 ## Cross-lab data reuse
 
 Lab 3/4 can use documents from the Lab 1 session corpus through
@@ -69,12 +88,27 @@ manual's illustrative Table 3. The manual prescribes no normalization
 algorithm, so this is an implementation choice, not a compliance fix; the
 naive stripper can over-merge («метро» → «метр»). See
 `docs/requirements-matrix.md`. The screens moved from the root page into
-`inverted-index/lab1-view.svelte`, now a thin orchestrator composing five
+`inverted-index/view.svelte`, now a thin orchestrator composing five
 cohesive subcomponents (`documents-panel.svelte`, `search-card.svelte`,
 `diagnostics-card.svelte`, `log-panel.svelte`, `document-modal.svelte`). They
 read `appStore` directly; the sibling search card and document modal share
 `view-state.svelte.ts` for the open-document viewer state instead of a new
 props/context layer. `/invertedIndex` and `/search/[docId]/[query]` routes are untouched.
+
+The document model intentionally has NO local file path: browsers do not expose
+one, and the manual only requires showing the source TEXTS. Only the display
+name (picked filename / demo label) is kept. The document modal shows the full
+source text first in a read-only Textarea, then three collapsible stages
+(source lexemes, normalized lexemes, postings) each in a read-only Textarea
+with a «Скачать» button that downloads that stage's text as a local `.txt`
+file (browser Blob API, no upload). The document list is two columns on `sm+`,
+one column on mobile.
+
+All four labs use the shared `src/lib/components/file-dropzone.svelte`: one
+hidden file input plus a drag-and-drop zone, with optional labelled pickers
+(Lab 4's relevant/non-relevant buttons) and an `actions` snippet for extra
+buttons. File/Blob APIs are touched only from user events; stores own the
+validation.
 
 Explicit additions for the registered variant («Гибридная схема», 2/8/14):
 
@@ -96,10 +130,7 @@ Explicit additions for the registered variant («Гибридная схема»
 - `/invertedIndex` sorts terms alphabetically via the shared pure helper
   `sort-terms.ts` (`Intl.Collator("ru")`), asserted against deliberately
   unsorted input in `tests/labs/lab1-validation.test.mts`; frequency remains
-  a secondary badge. The Lab 1 view shows the variant, per-document processing
-  stages (full source text in a scrollable panel, explicit «показано X из Y»
-  counts with a «Показать полностью» toggle for lexemes/normalized terms/postings),
-  and repeat diagnostics.
+  a secondary badge. The Lab 1 view shows the variant and repeat diagnostics.
 - Validation + hybrid-structure tests: `tests/labs/lab1-validation.test.mts`.
 
 ## Lab 2 — dictionary-based stemming

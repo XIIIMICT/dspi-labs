@@ -213,7 +213,7 @@ export function generateDemoCollection(options: DemoOptions = {}): DocumentSourc
     perThemeCounter[themeIndex] += 1;
     const name = `${theme.slug}_${number}.txt`;
 
-    sources.push({ name, path: `demo/${name}`, read: async () => text });
+    sources.push({ name, read: async () => text });
   }
 
   return sources;

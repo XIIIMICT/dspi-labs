@@ -49,7 +49,6 @@ assert.equal(await sources2[0].read(), texts[0], "генерация детер�
 const demoDocs: Document[] = texts.map((rawText, i) => ({
   id: i + 1,
   name: sources[i].name,
-  path: sources[i].path,
   rawText,
 }));
 const demoIndex = await new InvertedIndexBuilder().build(demoDocs);

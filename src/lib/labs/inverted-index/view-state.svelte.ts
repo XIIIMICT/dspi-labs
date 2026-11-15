@@ -9,11 +9,12 @@ import type { Document } from "./models";
 class Lab1ViewState {
   viewDoc = $state<Document | null>(null);
   viewOpen = $state(false);
-  showFullStages = $state(false);
+  /** Source text starts expanded; stages stay collapsed. */
+  sourceTextOpen = $state(true);
 
   open(doc: Document): void {
     this.viewDoc = doc;
-    this.showFullStages = false;
+    this.sourceTextOpen = true;
     this.viewOpen = true;
   }
 }

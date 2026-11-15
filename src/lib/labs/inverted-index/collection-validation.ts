@@ -14,10 +14,9 @@ export const REQUIRED_DOCUMENTS = 100;
 /** The assignment's minimum word count per document. */
 export const MIN_WORDS_PER_DOCUMENT = 1000;
 
-/** A source to validate: display name, optional path, and a text reader. */
+/** A source to validate: display name and a text reader (no local path). */
 export interface CollectionSource {
   name: string;
-  path: string;
   read(): Promise<string>;
 }
 
@@ -25,7 +24,6 @@ export interface CollectionSource {
 export interface ValidatedDocument {
   id: number;
   name: string;
-  path: string;
   rawText: string;
   wordCount: number;
 }
@@ -99,7 +97,6 @@ export async function validateCollection(
     documents.push({
       id: documents.length + 1,
       name: source.name,
-      path: source.path,
       rawText: text,
       wordCount,
     });

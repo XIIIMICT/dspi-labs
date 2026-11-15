@@ -42,7 +42,6 @@ function source(name: string, words: number): CollectionSource {
   // Distinct filler words per source so content duplicates are explicit tests.
   return {
     name,
-    path: name,
     read: async () => Array.from({ length: words }, (_, i) => `${name}${i}`).join(" "),
   };
 }
@@ -80,14 +79,13 @@ assert.equal(exact.documents.length, 100);
 // Empty and unreadable sources.
 const withEmpty = await validateCollection([
   ...validSources(99),
-  { name: "empty.txt", path: "empty.txt", read: async () => "   \n  " },
+  { name: "empty.txt", read: async () => "   \n  " },
 ]);
 assert.ok(withEmpty.errors.some((e) => /не содержит слов/.test(e)));
 const withBroken = await validateCollection([
   ...validSources(99),
   {
     name: "broken.txt",
-    path: "broken.txt",
     read: async () => {
       throw new Error("disk read failed");
     },
@@ -98,8 +96,8 @@ assert.ok(withBroken.errors.some((e) => /Не удалось прочитать/
 // Duplicate content under different names.
 const dupSources: CollectionSource[] = [
   ...validSources(98),
-  { name: "dup1.txt", path: "dup1.txt", read: async () => "same ".repeat(1200) },
-  { name: "dup2.txt", path: "dup2.txt", read: async () => "same ".repeat(1200) },
+  { name: "dup1.txt", read: async () => "same ".repeat(1200) },
+  { name: "dup2.txt", read: async () => "same ".repeat(1200) },
 ];
 const dup = await validateCollection(dupSources);
 assert.ok(dup.errors.some((e) => /дублирует содержимое/.test(e)));
@@ -121,17 +119,15 @@ assert.equal(mixed.errors.length > 0, true);
 
 // --- Manual's 3-document example: neuter -о family merges (Table 3) ---
 const manualDocs: Document[] = [
-  { id: 1, name: "d1.txt", path: "d1.txt", rawText: "Буря мглою небо кроет, вихри снежные крутя…" },
+  { id: 1, name: "d1.txt", rawText: "Буря мглою небо кроет, вихри снежные крутя…" },
   {
     id: 2,
     name: "d2.txt",
-    path: "d2.txt",
     rawText: "Налетел порывистый ветер, закружились снежные вихри…",
   },
   {
     id: 3,
     name: "d3.txt",
-    path: "d3.txt",
     rawText: "Закружился в небе листопад, снова листики с неба летят…",
   },
 ];
@@ -195,8 +191,8 @@ assert.deepEqual(flat.postings[1], {
 
 // Builder produces the same flat contract from the hybrid structure.
 const docs: Document[] = [
-  { id: 1, name: "a.txt", path: "a.txt", rawText: "кошка и кошка в документе. Кошки!" },
-  { id: 2, name: "b.txt", path: "b.txt", rawText: "документ и система документов" },
+  { id: 1, name: "a.txt", rawText: "кошка и кошка в документе. Кошки!" },
+  { id: 2, name: "b.txt", rawText: "документ и система документов" },
 ];
 const builder = new InvertedIndexBuilder();
 const index = await builder.build(docs);

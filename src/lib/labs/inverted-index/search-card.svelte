@@ -5,8 +5,7 @@
 	import { Badge } from '#lib/components/ui/badge';
 	import { Button } from '#lib/components/ui/button';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card';
-	import { Input } from '#lib/components/ui/input';
-	import { Label } from '#lib/components/ui/label';
+	import * as InputGroup from '#lib/components/ui/input-group';
 	import { Separator } from '#lib/components/ui/separator';
 	import { appStore as app } from './store.svelte';
 	import { lab1ViewState as viewer } from './view-state.svelte';
@@ -42,9 +41,8 @@
 	</CardHeader>
 	<CardContent class="flex flex-col gap-4">
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
-			<div class="flex flex-1 flex-col gap-1.5">
-				<Label for="search-query">Введите слово для поиска</Label>
-				<Input
+			<InputGroup.Root>
+				<InputGroup.Input
 					id="search-query"
 					placeholder="например: документы, индекс, система…"
 					bind:value={app.searchQuery}
@@ -52,14 +50,17 @@
 						if (event.key === 'Enter') app.showWordForms();
 					}}
 				/>
-			</div>
-			<Button
-				onclick={() => app.showWordForms()}
-				disabled={app.documents.length === 0 || app.isProcessing}
-			>
-				<SearchIcon data-icon="inline-start" />
-				Показать формы слова
-			</Button>
+				<InputGroup.Addon align="inline-end">
+					<InputGroup.Button
+						variant="secondary"
+						onclick={() => app.showWordForms()}
+						disabled={app.documents.length === 0 || app.isProcessing}
+					>
+						<SearchIcon data-icon="inline-start" />
+						Показать формы слова
+					</InputGroup.Button>
+				</InputGroup.Addon>
+			</InputGroup.Root>
 		</div>
 
 		{#if app.foundForms.length > 0}
@@ -85,7 +86,7 @@
 						Документы ({app.documents.length})
 					{/if}
 				</p>
-				<div class="grid gap-2">
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 					{#each app.documents as doc (doc.id)}
 						<div
 							class="hover:bg-muted/50 flex items-center gap-2 rounded-lg border p-3 transition-colors"
@@ -99,7 +100,7 @@
 								<span class="min-w-0">
 									<span class="block truncate font-medium">{doc.name}</span>
 									<span class="text-muted-foreground block truncate text-xs">
-										ID: {doc.id} — путь: {doc.path}
+										ID: {doc.id}
 									</span>
 								</span>
 							</button>
@@ -142,5 +143,5 @@
 	disabled={!hasIndex || app.isProcessing}
 >
 	<BookOpenIcon data-icon="inline-start" />
-	Инвертированный индекс
+	Построить инвертированный индекс
 </Button>

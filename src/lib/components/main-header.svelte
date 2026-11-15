@@ -78,11 +78,11 @@
 
 	<ModalOrDrawer
 		bind:open={assignmentOpen}
-		title="Задание — Лабораторная работа {lab.number}"
-		description={lab.title}
+		title={lab.title}
 	>
 		{#snippet badges()}
-			<Badge variant="secondary">Вариант: {variant}</Badge>
+		<Badge variant="secondary">Лабораторная работа {lab.number}</Badge>
+			<Badge variant="secondary">Вариант {variant}</Badge>
 			{#each variantFields as [key, value] (key)}
 				<Badge variant="secondary">{key}: {String(value)}</Badge>
 			{/each}

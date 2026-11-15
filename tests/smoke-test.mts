@@ -48,13 +48,11 @@ assert.deepEqual(removeStopWords(["и", "в", "на"]), []);
 const docA: Document = {
   id: 1,
   name: "a.txt",
-  path: "a.txt",
   rawText: "кошка и кошка в документе. Кошки!",
 };
 const docB: Document = {
   id: 2,
   name: "b.txt",
-  path: "b.txt",
   rawText: "документ и система документов",
 };
 
@@ -99,7 +97,6 @@ assert.equal(await sources2[0].read(), texts[0], "генерация детер�
 const demoDocs: Document[] = texts.map((rawText, i) => ({
   id: i + 1,
   name: sources[i].name,
-  path: sources[i].path,
   rawText,
 }));
 const demoIndex = await new InvertedIndexBuilder().build(demoDocs);

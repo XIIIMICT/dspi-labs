@@ -3,6 +3,7 @@
 	import { Badge } from '#lib/components/ui/badge';
 	import { Button } from '#lib/components/ui/button';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card';
+	import FileDropzone from '#lib/components/file-dropzone.svelte';
 	import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '#lib/components/ui/collapsible';
 	import { ScrollArea } from '#lib/components/ui/scroll-area';
 	import * as Table from '#lib/components/ui/table';
@@ -15,14 +16,12 @@
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 	import LibraryIcon from '@lucide/svelte/icons/library';
-	import UploadIcon from '@lucide/svelte/icons/upload';
 
 	// Lab 2 is the registry entry with folder "stemming"; number is derived.
 	const lab = $derived(labs.find((l) => l.folder === 'stemming') ?? labs[0]);
 	const variantInfo = $derived(getVariantInfo(lab, shellStore.selectedVariant));
 	const variantFields = $derived(getVariantFields(variantInfo));
 
-	let fileInput: HTMLInputElement | null = $state(null);
 	const rendered = $derived(
 		store.source && store.result ? renderStemmedText(store.source.text, store.result) : '',
 	);
@@ -36,45 +35,22 @@
 			Стемминг и лемматизация
 		</CardTitle>
 		<CardDescription>
-			Вариант {shellStore.selectedVariant} ({lab.number}-я лабораторная работа). Загрузите
-			текстовый файл (не менее {MIN_WORDS} слов) — словарный стеммер сопоставит слова текста со
+			Загрузите текстовый файл (не менее {MIN_WORDS} слов) — словарный стеммер сопоставит слова текста со
 			словарём основ.
 		</CardDescription>
 	</CardHeader>
 	<CardContent class="flex flex-col gap-3">
-		<div class="flex flex-wrap gap-2">
-			<Badge variant="secondary">Вариант: {shellStore.selectedVariant}</Badge>
-			{#each variantFields as [key, value] (key)}
-				<Badge variant="secondary">{key}: {String(value)}</Badge>
-			{/each}
-		</div>
-
-		<div class="flex flex-wrap gap-2">
-			<Button onclick={() => fileInput?.click()} disabled={store.isProcessing}>
-				<UploadIcon data-icon="inline-start" />
-				Выбрать текстовый файл
-			</Button>
-			{#if store.source}
-				<Button variant="outline" onclick={() => store.reset()}>Сбросить</Button>
-			{/if}
-		</div>
-		<input
-			type="file"
-			accept=".txt,text/plain"
-			class="hidden"
-			bind:this={fileInput}
-			onchange={(event) => {
-				const input = event.currentTarget;
-				const file = input.files?.[0];
-				input.value = '';
-				if (file) void store.loadFile(file);
-			}}
-		/>
-		<p class="text-muted-foreground text-sm">
-			Файл читается и обрабатывается локально в браузере. Обработка — словарный стемминг: точное
-			совпадение со словарём, затем поиск самой длинной основы-префикса (анализ с начала слова).
-		</p>
-
+		<FileDropzone
+			label="Выбрать файл"
+			loading={store.isProcessing}
+			onfiles={(files) => files[0] && store.loadFile(files[0])}
+		>
+			{#snippet actions()}
+				{#if store.source}
+					<Button variant="outline" onclick={() => store.reset()}>Сбросить</Button>
+				{/if}
+			{/snippet}
+		</FileDropzone>
 		{#if store.errors.length > 0}
 			<Alert variant="destructive">
 				<CircleAlertIcon />
